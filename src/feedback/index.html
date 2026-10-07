@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light" data-palette="default"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;"><title>画布提取进度</title><link rel="stylesheet" href="../themes.css"><link rel="stylesheet" href="style.css"></head>
+<body><section class="panel" aria-label="画布提取进度" role="status" aria-live="polite">
+<button id="close" type="button" aria-label="关闭说明，继续提取" title="关闭说明，继续提取"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+<div class="status-icon" id="status-icon" aria-hidden="true"></div>
+<h1 id="heading">页面打开中</h1><p id="description">正在打开作品页面，请稍候</p>
+<div id="steps" aria-label="读取步骤"><span class="step current"><i></i>打开页面</span><span class="connector"></span><span class="step"><i></i>进入画布</span><span class="connector"></span><span class="step"><i></i>读取数据</span></div>
+<div id="counts" hidden><div><strong id="node-count">0</strong><span>画布节点</span></div><div><strong id="prompt-count">0</strong><span>提示词与文本</span></div><div><strong id="asset-count">0</strong><span>项目资产</span></div></div>
+<div class="note"><div class="note-title"><svg id="note-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-6 4H2v6h3l6 4V5Zm6 4 5 6m0-6-5 6"/></svg><span id="note-title">提取期间已临时静音</span></div><p id="note-first">请尽量不要切换作品或关闭画布。</p><p id="note-second">如遇广告或登录弹窗，关闭本说明后处理。</p></div>
+<div class="foot"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg><span id="foot">关闭说明后，提取仍会继续</span></div>
+</section><script src="../theme-catalog.js"></script><script src="renderer.js"></script></body></html>

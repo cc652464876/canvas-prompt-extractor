@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "ui": "native",
+  "modules": [
+    "view-model.js",
+    "reader-targets.js",
+    "prompt-display.js",
+    "video-sample.js",
+    "preview-pool.js",
+    "video-cover-queue.js",
+    "thumbnails.js",
+    "interactions.js",
+    "appearance-dropdown.js",
+    "theme-manager.js",
+    "typography-manager.js",
+    "renderer.js"
+  ]
+}

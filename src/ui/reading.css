@@ -1,0 +1,20 @@
+/* Stacked readers: media -> title -> references -> prompt.
+   Side readers keep their two independent groups and align at the top. */
+#reading-board:not([data-layout=side]) .reading-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+#reading-board:not([data-layout=side]) .visual-col,
+#reading-board:not([data-layout=side]) .text-col { display: contents; }
+#reading-board:not([data-layout=side]) .media-host { grid-row: 1; }
+#reading-board:not([data-layout=side]) .carousel-nav { grid-row: 2; padding: 0; }
+#reading-board:not([data-layout=side]) .detail-heading { grid-row: 3; margin-bottom: 0; }
+#reading-board:not([data-layout=side]) .ref-strip { grid-row: 4; margin-top: 0; }
+#reading-board:not([data-layout=side]) .prompt-shell { grid-row: 5; }
+#reading-board:not([data-layout=side]) .resize-handle { grid-row: 6; }
+#reading-board[data-layout=stack] .reading-card { width: 100%; max-width: 1120px; margin-inline: auto; }
+.detail-heading { cursor: pointer; }
+.reading-card.is-collapsed .visual-col { display: none !important; }
+.reading-card.is-text .visual-col { display: none !important; }
+.reading-card.is-collapsed .detail-sub { flex: 1; }

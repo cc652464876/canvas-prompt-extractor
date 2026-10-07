@@ -1,0 +1,30 @@
+/* Shared reader footer; arrows scroll every referring node without a scrollbar. */
+.preview-actions { display: flex; flex: none; gap: 8px; }
+#media-dialog-title { min-width: 0; }
+.citing-strip { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.citing-label { flex: none; font-size: 12px; color: var(--muted); }
+.citing-links { display: flex; flex: 1; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; padding: 3px 0; }
+.citing-links::-webkit-scrollbar { display: none; }
+.citing-links button { flex: none; white-space: nowrap; font-size: 12px; height: 36px; min-height: 36px; padding: 0 10px; }
+.citing-arrow { flex: none; width: 26px; min-height: 36px; height: 36px; padding: 0; font-size: 22px; touch-action: none; user-select: none; }
+.citing-arrow[hidden] { display: none; }
+.asset-prompt-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.asset-prompt-choices button { font-size: 12px; }
+#reading-board[data-layout=side] .text-col { flex-direction: column; gap: 8px; }
+#reading-board:not([data-layout=side]) .citing-strip { grid-row: 5; }
+.reading-card.is-collapsed .citing-strip { display: none; }
+
+/* An invisible 8px target on the outer bottom border, outside the content flow. */
+.reading-card { position: relative; }
+.reading-card > .resize-handle {
+  position: absolute; left: 0; bottom: -1px; z-index: 5;
+  width: 100%; height: 8px; min-height: 8px; margin: 0; padding: 0;
+  border: 0; border-radius: 0 0 10px 10px; background: transparent;
+  box-shadow: none; opacity: 1; cursor: ns-resize;
+}
+.reading-card > .resize-handle::after { display: none; }
+.reading-card > .resize-handle:hover:not(:disabled),
+.reading-card > .resize-handle:active { background: transparent; border: 0; box-shadow: none; }
+.reading-card > .resize-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#reading-board[data-layout=side] .reading-card > .resize-handle,
+.reading-card.is-collapsed > .resize-handle { display: none; }

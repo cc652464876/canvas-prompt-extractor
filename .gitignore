@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.runtime/
+validation/
+.backups/
+exports/
+*.log

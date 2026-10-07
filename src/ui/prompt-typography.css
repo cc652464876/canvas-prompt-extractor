@@ -1,0 +1,27 @@
+/* Measured from the user's Dreamina canvas composer on 2026-10-06:
+   14px regular text, 24px lines, transparent 24px chips, 16px media, 4px gap. */
+.prompt-text {
+  font-family: var(--prompt-font-family);
+  font-size: var(--prompt-font-size); font-weight: 400; line-height: var(--prompt-line-height); letter-spacing: normal;
+  color: var(--prompt-text-color);
+}
+.prompt-text .prompt-inner { max-width: none; margin: 0; }
+.prompt-text .inline-ref {
+  display: inline-flex; align-items: center; vertical-align: top; gap: var(--prompt-ref-gap);
+  height: var(--prompt-line-height); min-height: var(--prompt-line-height); max-width: 100%;
+  margin: 0; padding: 0 var(--prompt-ref-gap); border: 0; border-radius: var(--prompt-chip-radius);
+  background: transparent; color: var(--prompt-reference-color); box-shadow: none;
+  font: inherit; line-height: var(--prompt-line-height); white-space: nowrap; user-select: text;
+}
+.prompt-text .inline-ref:hover:not(:disabled),
+.prompt-text .inline-ref:active:not(:disabled) {
+  background: transparent; color: var(--prompt-reference-hover); border: 0; box-shadow: none;
+}
+.prompt-text .inline-ref:disabled { opacity: 1; }
+.prompt-text .inline-ref:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.prompt-text .inline-ref img {
+  display: block; width: var(--prompt-ref-size); height: var(--prompt-ref-size); flex: 0 0 var(--prompt-ref-size);
+  border-radius: var(--prompt-ref-radius); object-fit: cover;
+}
+.prompt-text .ref-chip-label { font: inherit; white-space: nowrap; text-overflow: clip; }
+.prompt-text .linked-text pre { font-family: var(--prompt-font-family); font-size: var(--prompt-font-size); line-height: var(--prompt-line-height); }

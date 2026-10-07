@@ -1,0 +1,27 @@
+{
+  "name": "One Dark",
+  "slug": "one-dark",
+  "author": "Atom / Codex Themes",
+  "type": "app",
+  "mode": "dark",
+  "tags": ["dark", "modern", "balanced"],
+  "description": "One Dark adapted for Codex App with the classic Atom-style palette.",
+  "codeThemeId": "one-dark",
+  "theme": {
+    "accent": "#61afef",
+    "background": "#282c34",
+    "foreground": "#abb2bf",
+    "surface": "#353b45",
+    "contrast": 41,
+    "opaqueWindows": false,
+    "semanticColors": {
+      "diffAdded": "#98c379",
+      "diffRemoved": "#e06c75",
+      "skill": "#c678dd"
+    },
+    "fonts": {
+      "ui": "SF Pro Text",
+      "code": "SF Mono"
+    }
+  }
+}

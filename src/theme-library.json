@@ -1,0 +1,818 @@
+{
+  "absolutely": {
+    "name": "绝对",
+    "originalName": "Absolutely",
+    "description": "Absolutely 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/absolutely-light/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/absolutely-light/theme.json",
+        "adaptation": "该模式由已有参考配色补齐，沿用强调色与主题风格。"
+      }
+    },
+    "light": {
+      "accent": "#cc7d5e",
+      "background": "#f9f9f7",
+      "foreground": "#2d2d2b",
+      "surface": "#ffffff",
+      "contrast": 45,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#2f9e44",
+        "diffRemoved": "#e03131",
+        "skill": "#a75d44"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#cc7d5e",
+      "background": "#2d2d2b",
+      "foreground": "#f9f9f7",
+      "contrast": 45,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#2f9e44",
+        "diffRemoved": "#e03131",
+        "skill": "#a75d44"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "ayu": {
+    "name": "Ayu",
+    "originalName": "Ayu",
+    "description": "Ayu 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/ayu-light/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/ayu-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#f29718",
+      "background": "#fcfcfc",
+      "foreground": "#5c6166",
+      "surface": "#ffffff",
+      "contrast": 20,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#6cbf43",
+        "diffRemoved": "#f07171",
+        "skill": "#399ee6"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#ffb454",
+      "background": "#0f1419",
+      "foreground": "#e6e1cf",
+      "surface": "#171b24",
+      "contrast": 47,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#7fd962",
+        "diffRemoved": "#f26d78",
+        "skill": "#d2a6ff"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "catppuccin": {
+    "name": "猫布奇诺",
+    "originalName": "Catppuccin",
+    "description": "Catppuccin 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/catppuccin-latte/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/catppuccin-mocha/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#1e66f5",
+      "background": "#eff1f5",
+      "foreground": "#4c4f69",
+      "surface": "#e6e9ef",
+      "contrast": 22,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#40a02b",
+        "diffRemoved": "#d20f39",
+        "skill": "#8839ef"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#89b4fa",
+      "background": "#1e1e2e",
+      "foreground": "#cdd6f4",
+      "surface": "#313244",
+      "contrast": 46,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#a6e3a1",
+        "diffRemoved": "#f38ba8",
+        "skill": "#cba6f7"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "dracula": {
+    "name": "德古拉",
+    "originalName": "Dracula",
+    "description": "Dracula 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/dracula/theme.json",
+        "adaptation": "该模式由已有参考配色补齐，沿用强调色与主题风格。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/dracula/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#bd93f9",
+      "background": "#faf7fc",
+      "foreground": "#302a3b",
+      "contrast": 55,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#50fa7b",
+        "diffRemoved": "#ff5555",
+        "skill": "#bd93f9"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#bd93f9",
+      "background": "#282a36",
+      "foreground": "#f8f8f2",
+      "surface": "#44475a",
+      "contrast": 55,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#50fa7b",
+        "diffRemoved": "#ff5555",
+        "skill": "#bd93f9"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "everforest": {
+    "name": "常青森林",
+    "originalName": "Everforest",
+    "description": "Everforest 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/everforest-light/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/everforest-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#93b259",
+      "background": "#fdf6e3",
+      "foreground": "#5c6a72",
+      "surface": "#f4f0d9",
+      "contrast": 26,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#8da101",
+        "diffRemoved": "#f85552",
+        "skill": "#df69ba"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#a7c080",
+      "background": "#2b3339",
+      "foreground": "#d3c6aa",
+      "surface": "#374145",
+      "contrast": 44,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#a7c080",
+        "diffRemoved": "#e67e80",
+        "skill": "#d699b6"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "github": {
+    "name": "GitHub",
+    "originalName": "GitHub",
+    "description": "GitHub 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/github-light/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/github-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#0969da",
+      "background": "#ffffff",
+      "foreground": "#1f2328",
+      "surface": "#f6f8fa",
+      "contrast": 18,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#1a7f37",
+        "diffRemoved": "#cf222e",
+        "skill": "#8250df"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#58a6ff",
+      "background": "#0d1117",
+      "foreground": "#c9d1d9",
+      "surface": "#161b22",
+      "contrast": 40,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#3fb950",
+        "diffRemoved": "#f85149",
+        "skill": "#a371f7"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "gruvbox": {
+    "name": "Gruvbox",
+    "originalName": "Gruvbox",
+    "description": "Gruvbox 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/gruvbox-light/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/gruvbox-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#d79921",
+      "background": "#fbf1c7",
+      "foreground": "#3c3836",
+      "surface": "#ebdbb2",
+      "contrast": 34,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#98971a",
+        "diffRemoved": "#cc241d",
+        "skill": "#b16286"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#d79921",
+      "background": "#282828",
+      "foreground": "#ebdbb2",
+      "surface": "#3c3836",
+      "contrast": 61,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#98971a",
+        "diffRemoved": "#cc241d",
+        "skill": "#b16286"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "linear": {
+    "name": "Linear",
+    "originalName": "Linear",
+    "description": "Linear 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/samuxbuilds/codex-themes/3139c928366f129cb53d7eca18bfd2ddfcc899a3/src/lib/theme-generator.ts",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/samuxbuilds/codex-themes/3139c928366f129cb53d7eca18bfd2ddfcc899a3/src/lib/theme-generator.ts",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#5e6ad2",
+      "background": "#f9f9fb",
+      "foreground": "#222326",
+      "semanticColors": {
+        "diffAdded": "#4da672",
+        "diffRemoved": "#d94848"
+      }
+    },
+    "dark": {
+      "accent": "#5e6ad2",
+      "background": "#1a1a2e",
+      "foreground": "#e8e8f0",
+      "semanticColors": {
+        "diffAdded": "#4da672",
+        "diffRemoved": "#d94848"
+      }
+    }
+  },
+  "lobster": {
+    "name": "龙虾",
+    "originalName": "Lobster",
+    "description": "Lobster 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/7368697661/Ultra-Lobster/e3121703dddda008218872f4ac38cad602e25619/theme.css",
+        "adaptation": "参考 Ultra Lobster 的 lobster-time 配色，并以红色作为强调色；不声称等同 Codex 内置 Lobster。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/7368697661/Ultra-Lobster/e3121703dddda008218872f4ac38cad602e25619/theme.css",
+        "adaptation": "参考 Ultra Lobster 的 lobster-time 配色，并以红色作为强调色；不声称等同 Codex 内置 Lobster。"
+      }
+    },
+    "light": {
+      "accent": "#ea5e41",
+      "background": "#e0f2fe",
+      "surface": "#f0f9ff",
+      "foreground": "#0a192f",
+      "semanticColors": {
+        "diffAdded": "#a9d37e",
+        "diffRemoved": "#ea5e41"
+      }
+    },
+    "dark": {
+      "accent": "#ea5e41",
+      "background": "#0a1128",
+      "surface": "#121c3b",
+      "foreground": "#e6e9f0",
+      "semanticColors": {
+        "diffAdded": "#5fb26b",
+        "diffRemoved": "#ea5e41"
+      }
+    }
+  },
+  "tokyo-night": {
+    "name": "东京之夜",
+    "originalName": "Tokyo Night",
+    "description": "Tokyo Night 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/tokyo-day/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/tokyo-night/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#2959aa",
+      "background": "#e6e7ed",
+      "foreground": "#343b59",
+      "surface": "#dfe1e8",
+      "contrast": 24,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#587539",
+        "diffRemoved": "#8c4351",
+        "skill": "#5a4a78"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#7aa2f7",
+      "background": "#1a1b26",
+      "foreground": "#c0caf5",
+      "surface": "#24283b",
+      "contrast": 52,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#9ece6a",
+        "diffRemoved": "#f7768e",
+        "skill": "#bb9af7"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "material": {
+    "name": "材质",
+    "originalName": "Material",
+    "description": "Material 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/material-lighter/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/material-ocean/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#7c4dff",
+      "background": "#fafafa",
+      "foreground": "#546e7a",
+      "surface": "#ffffff",
+      "contrast": 18,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#91b859",
+        "diffRemoved": "#ff5370",
+        "skill": "#c792ea"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#82aaff",
+      "background": "#263238",
+      "foreground": "#eeffff",
+      "surface": "#2e3c43",
+      "contrast": 46,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#c3e88d",
+        "diffRemoved": "#f07178",
+        "skill": "#c792ea"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "monokai": {
+    "name": "Monokai",
+    "originalName": "Monokai",
+    "description": "Monokai 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/monokai/theme.json",
+        "adaptation": "该模式由已有参考配色补齐，沿用强调色与主题风格。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/monokai/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#fd971f",
+      "background": "#faf7fc",
+      "foreground": "#302a3b",
+      "contrast": 56,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#a6e22e",
+        "diffRemoved": "#f92672",
+        "skill": "#ae81ff"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#fd971f",
+      "background": "#272822",
+      "foreground": "#f8f8f2",
+      "surface": "#3e3d32",
+      "contrast": 56,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#a6e22e",
+        "diffRemoved": "#f92672",
+        "skill": "#ae81ff"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "nord": {
+    "name": "北欧",
+    "originalName": "Nord",
+    "description": "Nord 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/samuxbuilds/codex-themes/3139c928366f129cb53d7eca18bfd2ddfcc899a3/src/lib/theme-generator.ts",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/nord/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#5e81ac",
+      "background": "#eceff4",
+      "foreground": "#2e3440",
+      "semanticColors": {
+        "diffAdded": "#a3be8c",
+        "diffRemoved": "#bf616a"
+      }
+    },
+    "dark": {
+      "accent": "#88c0d0",
+      "background": "#2e3440",
+      "foreground": "#eceff4",
+      "surface": "#3b4252",
+      "contrast": 43,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#a3be8c",
+        "diffRemoved": "#bf616a",
+        "skill": "#b48ead"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "notion": {
+    "name": "Notion",
+    "originalName": "Notion",
+    "description": "Notion 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/samuxbuilds/codex-themes/3139c928366f129cb53d7eca18bfd2ddfcc899a3/src/lib/theme-generator.ts",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/samuxbuilds/codex-themes/3139c928366f129cb53d7eca18bfd2ddfcc899a3/src/lib/theme-generator.ts",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#3183d8",
+      "background": "#ffffff",
+      "foreground": "#37352f",
+      "semanticColors": {
+        "diffAdded": "#008000",
+        "diffRemoved": "#a31515"
+      }
+    },
+    "dark": {
+      "accent": "#529cca",
+      "background": "#191919",
+      "foreground": "#e3e2e0",
+      "semanticColors": {
+        "diffAdded": "#4dab9a",
+        "diffRemoved": "#c4554d"
+      }
+    }
+  },
+  "one": {
+    "name": "一",
+    "originalName": "One",
+    "description": "One 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/samuxbuilds/codex-themes/3139c928366f129cb53d7eca18bfd2ddfcc899a3/src/lib/theme-generator.ts",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/one-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#4078f2",
+      "background": "#fafafa",
+      "foreground": "#383a42",
+      "semanticColors": {
+        "diffAdded": "#50a14f",
+        "diffRemoved": "#e45649"
+      }
+    },
+    "dark": {
+      "accent": "#61afef",
+      "background": "#282c34",
+      "foreground": "#abb2bf",
+      "surface": "#353b45",
+      "contrast": 41,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#98c379",
+        "diffRemoved": "#e06c75",
+        "skill": "#c678dd"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "rose-pine": {
+    "name": "玫瑰松",
+    "originalName": "Rosé Pine",
+    "description": "Rosé Pine 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/rose-pine-dawn/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/rose-pine/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#d7827e",
+      "background": "#faf4ed",
+      "foreground": "#575279",
+      "surface": "#fffaf3",
+      "contrast": 18,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#56949f",
+        "diffRemoved": "#b4637a",
+        "skill": "#907aa9"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#c4a7e7",
+      "background": "#191724",
+      "foreground": "#e0def4",
+      "surface": "#26233a",
+      "contrast": 44,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#9ccfd8",
+        "diffRemoved": "#eb6f92",
+        "skill": "#c4a7e7"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "solarized": {
+    "name": "日光",
+    "originalName": "Solarized",
+    "description": "Solarized 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/solarized-light/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/solarized-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#268bd2",
+      "background": "#fdf6e3",
+      "foreground": "#586e75",
+      "surface": "#eee8d5",
+      "contrast": 22,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#859900",
+        "diffRemoved": "#dc322f",
+        "skill": "#6c71c4"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#268bd2",
+      "background": "#002b36",
+      "foreground": "#839496",
+      "surface": "#073642",
+      "contrast": 36,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#859900",
+        "diffRemoved": "#dc322f",
+        "skill": "#6c71c4"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  },
+  "codex": {
+    "name": "Codex",
+    "originalName": "Codex",
+    "description": "Codex 参考配色",
+    "references": {
+      "light": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/codex-dark/theme.json",
+        "adaptation": "该模式由已有参考配色补齐，沿用强调色与主题风格。"
+      },
+      "dark": {
+        "url": "https://raw.githubusercontent.com/shaw-baobao/codex-themes/ac4551873d0bb1b6c4a5c62c49510a7f5480f317/themes/codex-dark/theme.json",
+        "adaptation": "公开参考主题数据；组件颜色由程序统一适配。"
+      }
+    },
+    "light": {
+      "accent": "#339cff",
+      "background": "#faf7fc",
+      "foreground": "#302a3b",
+      "contrast": 45,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#34c759",
+        "diffRemoved": "#ff5f57",
+        "skill": "#7c8cff"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    },
+    "dark": {
+      "accent": "#339cff",
+      "background": "#181818",
+      "foreground": "#ffffff",
+      "surface": "#2d2d2b",
+      "contrast": 45,
+      "opaqueWindows": false,
+      "semanticColors": {
+        "diffAdded": "#34c759",
+        "diffRemoved": "#ff5f57",
+        "skill": "#7c8cff"
+      },
+      "fonts": {
+        "ui": "SF Pro Text",
+        "code": "SF Mono"
+      }
+    }
+  }
+}

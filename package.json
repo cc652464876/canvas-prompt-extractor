@@ -1,0 +1,30 @@
+{
+  "name": "canvas-prompt-extractor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "自由画布提取 Windows 便携版",
+  "main": "src/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "start": "node scripts/start.cjs",
+    "verify:ui": "node scripts/start.cjs --verify-ui",
+    "verify:live": "node scripts/start.cjs --verify-live",
+    "verify:layout": "node scripts/start.cjs --verify-v08",
+    "verify:readers": "node scripts/verify-reader-navigation.cjs",
+    "verify:accounts": "node scripts/verify-account-state.cjs",
+    "verify:account-startup": "node scripts/start.cjs --verify-account-startup",
+    "verify:browser-reset": "node scripts/start.cjs --verify-browser-reset",
+    "verify:local-project": "node scripts/start.cjs --verify-local-project",
+    "verify:cleanup": "node scripts/verify-extraction-cleanup.cjs",
+    "verify:themes": "node scripts/verify-themes.cjs",
+    "package:portable": "node scripts/package-portable.cjs",
+    "verify:deadline": "node scripts/start.cjs --verify-read-deadline",
+    "verify:portable": "node scripts/verify-portable.cjs"
+  },
+  "productName": "自由画布提取",
+  "devDependencies": {
+    "electron": "44.5.1"
+  }
+}

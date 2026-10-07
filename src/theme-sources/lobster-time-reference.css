@@ -1,0 +1,124 @@
+.theme-light.ulu-lobstertime-lt {
+
+    --ulu-glass-ring-light: 0 0 0 1px rgba(255, 255, 255, 0.15); /* outer glow ring on glass elements — subtle at 15% (light mode) */
+    --accent-h: 13; /* accent hue override — warm coral */
+    --accent-s: 68%; /* accent saturation override */
+    --accent-l: 63%; /* accent lightness override */
+    --mono-rgb-0: #ffffff; /* pure white anchor for fills */
+    --mono-rgb-100: #0a192f; /* deep navy anchor for text */
+    --canvas-color: 150, 214, 243; /* canvas node border colour */
+    --proxy-00: #e0f2fe; /* raw sky-blue lightest surface */
+    --proxy-10: #f0f9ff; /* raw near-white sky surface */
+    --proxy-20: #bae6fd; /* raw mid sky-blue secondary surface */
+    --color-red: #ea5e41;
+    --color-red-hsl: 10.3, 80.1%, 58.6%;
+    --color-red-rgb: 234, 94, 65;
+    --color-green: #a9d37e;
+    --color-green-hsl: 89.6, 49.1%, 66.1%;
+    --color-green-rgb: 169, 211, 126;
+    --color-orange: #ed874c;
+    --color-orange-hsl: 22, 81.7%, 61.4%;
+    --color-orange-rgb: 237, 135, 76;
+    --color-yellow: #e9ba4a;
+    --color-yellow-hsl: 42.3, 78.3%, 60.2%;
+    --color-yellow-rgb: 233, 186, 74;
+    --color-cyan: #5ab7ed;
+    --color-cyan-hsl: 202, 80.3%, 64.1%;
+    --color-cyan-rgb: 90, 183, 237;
+    --color-blue: #339af0;
+    --color-blue-hsl: 207.3, 86.3%, 57.1%;
+    --color-blue-rgb: 51, 154, 240;
+    --color-purple: #7865e6;
+    --color-purple-hsl: 248.8, 72.1%, 64.9%;
+    --color-purple-rgb: 120, 101, 230;
+    --color-pink: #f6b7d8;
+    --color-pink-hsl: 328.6, 77.8%, 84.1%;
+    --color-pink-rgb: 246, 183, 216;
+    --color-base-00: var(--proxy-00); /* deepest background layer */
+    --color-base-05: #ffffff; /* slight lift above base-00 for nested panels */
+    --color-base-10: var(--proxy-10); /* primary workspace background */
+    --color-base-20: var(--proxy-20); /* secondary / content-well background */
+    --color-base-25: #ade4ff; /* subtle separator — bright sky */
+    --color-base-30: #96d6f3; /* border-adjacent surface */
+    --color-base-35: #0ea5e9; /* interactive element background — vivid sky */
+    --color-base-40: #0284c7; /* active / selected element background */
+    --color-base-50: #0369a1; /* mid-tone — deep sky text */
+    --color-base-60: #075985; /* muted text */
+    --color-base-70: #0c4a6e; /* secondary body text */
+    --color-base-100: #0a192f; /* primary body text — deep navy */
+    --gradient-bg-primary: linear-gradient(
+        135deg,
+        #f0f9ff 1.62%,
+        #e0f2fe 50.72%
+    ) !important; /* primary pane background gradient */
+    --gradient-bg-secondary: linear-gradient(
+        135deg,
+        #caeaff 1.62%,
+        #aed7f3 50.72%
+    ) !important; /* secondary pane background gradient */
+    --background-modifier-border-alt: #7dd3fc !important; /* alternate UI border colour */
+    --glass-border-light: #ffffff; /* light highlight edge of glass borders */
+    --glass-border-dark: #38bdf8; /* dark shadow edge of glass borders */
+}
+
+.theme-dark.ulu-lobstertime-dt {
+
+    --accent-h: 75; /* accent hue override — muted yellow-green */
+    --accent-s: 21%; /* accent saturation override */
+    --accent-l: 57%; /* accent lightness override */
+    --mono-rgb-0: #0a1128; /* deep navy-black anchor for fills */
+    --mono-rgb-100: #e6e9f0; /* cool off-white anchor for text */
+    --ulu-tab-active-bg: var(--color-base-30); /* active tab pill background */
+    --canvas-color: 42, 59, 110; /* canvas node border colour */
+    --proxy-00: #0a1128; /* raw deepest navy surface */
+    --proxy-10: #121c3b; /* raw mid-navy surface */
+    --proxy-20: #1c2a52; /* raw secondary navy-indigo surface */
+    --color-red: #ea5e41;
+    --color-red-hsl: 10.3, 80.1%, 58.6%;
+    --color-red-rgb: 234, 94, 65;
+    --color-green: #5fb26b;
+    --color-green-hsl: 128.7, 35%, 53.5%;
+    --color-green-rgb: 95, 178, 107;
+    --color-orange: #ed874c;
+    --color-orange-hsl: 22, 81.7%, 61.4%;
+    --color-orange-rgb: 237, 135, 76;
+    --color-yellow: #e9bf55;
+    --color-yellow-hsl: 43, 77.1%, 62.4%;
+    --color-yellow-rgb: 233, 191, 85;
+    --color-cyan: #47afeb;
+    --color-cyan-hsl: 202, 80.4%, 60%;
+    --color-cyan-rgb: 71, 175, 235;
+    --color-blue: #2e8ccc;
+    --color-blue-hsl: 204.3, 63.2%, 49%;
+    --color-blue-rgb: 46, 140, 204;
+    --color-purple: #4b53d1;
+    --color-purple-hsl: 236.4, 59.3%, 55.7%;
+    --color-purple-rgb: 75, 83, 209;
+    --color-pink: #eb6faf;
+    --color-pink-hsl: 329, 75.6%, 67.8%;
+    --color-pink-rgb: 235, 111, 175;
+    --color-base-00: var(--proxy-00); /* deepest background layer */
+    --color-base-10: var(--proxy-10); /* primary workspace background */
+    --color-base-20: var(--proxy-20); /* secondary / content-well background */
+    --color-base-25: #1c2a52; /* subtle separator and hover surface */
+    --color-base-30: #2a3b6e; /* border-adjacent surface */
+    --color-base-35: #3a4b82; /* interactive element background */
+    --color-base-40: #2a3b6e; /* active / selected element background */
+    --color-base-50: #4a5c96; /* mid-tone — subdued icons and dividers */
+    --color-base-60: #5a6ca8; /* muted text */
+    --color-base-70: #8a9ccc; /* secondary body text */
+    --color-base-100: #e6e9f0; /* primary body text */
+    --gradient-bg-primary: linear-gradient(
+        135deg,
+        #0e1633 1.62%,
+        #0a1128 50.72%
+    ) !important; /* primary pane background gradient */
+    --gradient-bg-secondary: linear-gradient(
+        135deg,
+        #182347 1.62%,
+        #121c3b 50.72%
+    ) !important; /* secondary pane background gradient */
+    --background-modifier-border-alt: #2a3b6e !important; /* alternate UI border colour */
+    --glass-border-light: #5a6ca8; /* light highlight edge of glass borders */
+    --glass-border-dark: #0a1128; /* dark shadow edge of glass borders */
+}
