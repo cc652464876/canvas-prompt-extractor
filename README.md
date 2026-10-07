@@ -6,7 +6,7 @@
 
 ## 下载与启动
 
-前往 **[v1.0.0 发布页](https://github.com/cc652464876/canvas-prompt-extractor/releases/tag/v1.0.0)**，下载名称包含 `Windows-x64` 和 `便携版` 的 ZIP。GitHub 自动生成的 “Source code” 是源码，不是可直接运行的程序。
+前往 **[v1.0.0 发布页](https://github.com/cc652464876/canvas-prompt-extractor/releases/tag/v1.0.0)**，下载 `canvas-prompt-extractor-v1.0.0-Windows-x64-portable.zip`。GitHub 自动生成的 “Source code” 是源码，不是可直接运行的程序。
 
 1. 将 ZIP **完整解压**到 Windows 10/11 x64 的可写文件夹。
 2. 双击 `自由画布提取.exe`，也可使用同目录的启动 CMD。
