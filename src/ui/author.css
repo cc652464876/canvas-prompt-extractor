@@ -1,0 +1,186 @@
+/* The right-hand toolbar divides evenly into search and independent view toggles. */
+.board-toolbar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, var(--control-height));
+}
+.board-toolbar .scope-group {
+  grid-column: 1;
+  grid-row: 1;
+}
+.board-toolbar #category-filters {
+  grid-column: 1;
+  grid-row: 2;
+}
+.board-toolbar .board-search-row {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-columns: minmax(0, 1fr) var(--action-width);
+  gap: var(--module-gap);
+}
+.board-toolbar .board-search-row .search-field {
+  grid-column: 1;
+  grid-row: auto;
+}
+.board-toolbar .board-search-row .board-visibility {
+  grid-column: 2;
+  display: flex;
+  width: 100%;
+  height: var(--control-height);
+}
+.board-visibility > button {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: var(--control-height);
+}
+.board-toolbar .board-right-module .density {
+  grid-column: 2;
+  grid-row: 2;
+}
+.author-mode .board-toolbar .board-search-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.author-mode .board-toolbar .board-search-row .board-visibility {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.author-mode .board-visibility > button {
+  width: 100%;
+  border-radius: 0;
+  padding: 0 8px;
+  font-size: 13px;
+}
+.author-mode .board-visibility > button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+.author-mode .board-visibility > button:last-child {
+  border-radius: 0 8px 8px 0;
+  border-left: 0;
+}
+.author-mode .board-visibility > button.active {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+  border-color: var(--selection-border);
+  box-shadow: none;
+}
+.author-mode .board-visibility > button.active:hover {
+  background: var(--selection-hover);
+  color: var(--selection-text);
+}
+.author-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: -4px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.author-summary strong {
+  color: var(--text);
+  font-size: 13px;
+}
+.author-actions {
+  display: flex;
+  margin-left: auto;
+  gap: 4px;
+}
+.author-actions .quiet {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0 12px;
+  font-size: 12px;
+}
+.author-section {
+  margin-bottom: 20px;
+}
+.author-mode #board-body {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.work-wrapper {
+  min-width: 0;
+}
+.work-card {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  line-height: inherit;
+  gap: 0;
+}
+.work-card.is-selected {
+  background: var(--selection-bg);
+  border-color: var(--selection-border);
+}
+.work-card.is-selected:hover {
+  background: var(--selection-hover);
+  border-color: var(--selection-border);
+}
+.work-card .asset-kind {
+  left: auto;
+  right: 8px;
+}
+.work-card .card-footer {
+  justify-content: center;
+}
+.work-card.is-selected .card-footer {
+  color: var(--selection-text);
+  border-top-color: var(--selection-border);
+}
+.work-state {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 5px 3px;
+  overflow-wrap: anywhere;
+}
+.work-state .quiet {
+  min-height: 28px;
+  height: 28px;
+  margin-left: 5px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.author-selection-status,
+.download-context {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.work-source {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 790px) {
+  .board-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(4, var(--control-height));
+  }
+  .board-toolbar .scope-group {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .board-toolbar #category-filters {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .board-toolbar .board-search-row {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .board-toolbar .board-right-module .density {
+    grid-column: 1;
+    grid-row: 4;
+  }
+  .author-summary {
+    flex-wrap: wrap;
+  }
+  .author-actions {
+    margin-left: auto;
+  }
+}
+
+.author-actions #author-read{height:var(--control-height);min-height:var(--control-height);margin-left:8px;padding:0 16px;font-size:13px}
+@media(max-width:600px){.author-actions{width:100%;justify-content:flex-end;flex-wrap:wrap}.author-actions #author-read{margin-left:0}}

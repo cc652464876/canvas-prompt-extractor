@@ -1,7 +1,10 @@
 node_modules/
+runtime/
 dist/
+build/
 .runtime/
-validation/
+开发辅助/验收记录/
 .backups/
 exports/
 *.log
+*.lnk

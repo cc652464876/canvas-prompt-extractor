@@ -1,0 +1,582 @@
+{
+  "liblib": {
+    "schemaVersion": 2,
+    "metadata": {
+      "platform": "liblib",
+      "title": "家具产品宣传广告",
+      "author": "Li鱼",
+      "inputUrl": "https://www.liblib.tv/detail/94da194049354a42a71b568aec4b64f3",
+      "canvasTitle": "家具产品宣传广告",
+      "canvasUrl": "https://www.liblib.tv/detail/94da194049354a42a71b568aec4b64f3",
+      "extractedAt": "2026-10-09T00:00:00.000Z"
+    },
+    "diagnostics": {
+      "source": "react-flow-props",
+      "nodeCount": 5,
+      "edgeCount": 4,
+      "directEntryCount": 2,
+      "directGenerationCount": 0,
+      "readableTextCount": 2,
+      "unreadableTextCount": 0,
+      "linkedGenerationCount": 2,
+      "referenceOnlyCount": 2,
+      "counts": {
+        "video": 1,
+        "image_text": 0,
+        "image_reference": 1,
+        "image_unknown": 0,
+        "audio": 0,
+        "text": 2
+      },
+      "skipped": [
+        {
+          "nodeId": "jDfkIX6nEq",
+          "name": "1024",
+          "reason": "素材节点，无当前生成提示词"
+        }
+      ],
+      "warnings": [
+        "读取的是当前节点参数与关联文本；仅连线不代表生成用途，尚未核验历史资产生成时的完整提示词。"
+      ]
+    },
+    "entries": [
+      {
+        "nodeId": "vkKOAJDhuy",
+        "name": "视频节点 5",
+        "group": "未分组",
+        "position": {},
+        "references": [
+          {
+            "type": "image",
+            "index": 1,
+            "marker": "Mixed 1",
+            "name": "图片节点 4",
+            "nodeId": "wibgBN2cmT",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "assetIds": [
+              "199764c94ee744de77721f8d"
+            ]
+          },
+          {
+            "type": "text",
+            "index": 1,
+            "marker": "Text 1",
+            "name": "文本节点 2 - 副本",
+            "nodeId": "qxpYr1kQih",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "assetIds": []
+          }
+        ],
+        "referenceTexts": [
+          {
+            "nodeId": "qxpYr1kQih",
+            "name": "文本节点 2 - 副本",
+            "text": "将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。",
+            "rawText": "```\n将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。\n```",
+            "textSource": "parameter-content",
+            "textState": "ready",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "parameterText": "```\n将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。\n```",
+            "textVersion": "parameter-content",
+            "textMismatch": false,
+            "relation": "当前生成配置引用",
+            "textKey": "text-4703233bad465ee9ffe2"
+          }
+        ],
+        "kind": "video",
+        "prompt": "",
+        "promptSource": "reference-text-only",
+        "settings": {
+          "mode": "mixed2video",
+          "ratio": "16:9",
+          "resolution": "480p",
+          "duration": 10,
+          "count": 1,
+          "enableSound": "on"
+        },
+        "model": "star-video2-fast",
+        "outputAssetIds": [
+          "9893c9f928540c7a9f0c1ccd"
+        ]
+      },
+      {
+        "nodeId": "qxpYr1kQih",
+        "name": "文本节点 2 - 副本",
+        "group": "未分组",
+        "position": {},
+        "references": [],
+        "referenceTexts": [],
+        "kind": "text",
+        "prompt": "将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。",
+        "promptSource": "text-node",
+        "settings": {},
+        "text": "将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。",
+        "rawText": "```\n将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。\n```",
+        "textSource": "node-content",
+        "textState": "ready",
+        "textUsage": "generation-input",
+        "linkedNodeIds": [
+          "vkKOAJDhuy"
+        ],
+        "connectionStatus": "linked",
+        "outputAssetIds": []
+      },
+      {
+        "nodeId": "wibgBN2cmT",
+        "name": "图片节点 4",
+        "group": "未分组",
+        "position": {},
+        "references": [
+          {
+            "type": "image",
+            "index": 1,
+            "marker": "Image 1",
+            "name": "1024",
+            "nodeId": "jDfkIX6nEq",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "assetIds": [
+              "a6c090b088276d1e5690285b"
+            ]
+          },
+          {
+            "type": "text",
+            "index": 1,
+            "marker": "Text 1",
+            "name": "文本节点 2",
+            "nodeId": "IutwBaWOil",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "assetIds": []
+          }
+        ],
+        "referenceTexts": [
+          {
+            "nodeId": "IutwBaWOil",
+            "name": "文本节点 2",
+            "text": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+            "rawText": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+            "textSource": "parameter-content",
+            "textState": "ready",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "parameterText": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+            "textVersion": "parameter-content",
+            "textMismatch": false,
+            "relation": "当前生成配置引用",
+            "textKey": "text-532f60f5e7c0b0885eeb"
+          }
+        ],
+        "kind": "image_reference",
+        "prompt": "",
+        "promptSource": "reference-text-only",
+        "settings": {
+          "mode": "image2image",
+          "ratio": "16:9",
+          "resolution": "2K",
+          "count": 1
+        },
+        "model": "nebula-ultra",
+        "outputAssetIds": [
+          "199764c94ee744de77721f8d"
+        ]
+      },
+      {
+        "nodeId": "IutwBaWOil",
+        "name": "文本节点 2",
+        "group": "未分组",
+        "position": {},
+        "references": [],
+        "referenceTexts": [],
+        "kind": "text",
+        "prompt": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+        "promptSource": "text-node",
+        "settings": {},
+        "text": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+        "rawText": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+        "textSource": "node-content",
+        "textState": "ready",
+        "textUsage": "generation-input",
+        "linkedNodeIds": [
+          "wibgBN2cmT"
+        ],
+        "connectionStatus": "linked",
+        "outputAssetIds": []
+      }
+    ],
+    "edges": [
+      {
+        "source": "IutwBaWOil",
+        "target": "wibgBN2cmT",
+        "sourceHandle": "source",
+        "targetHandle": "target"
+      },
+      {
+        "source": "jDfkIX6nEq",
+        "target": "wibgBN2cmT"
+      },
+      {
+        "source": "wibgBN2cmT",
+        "target": "vkKOAJDhuy"
+      },
+      {
+        "source": "qxpYr1kQih",
+        "target": "vkKOAJDhuy"
+      }
+    ],
+    "nodeSummaries": [
+      {
+        "nodeId": "vkKOAJDhuy",
+        "name": "视频节点 5",
+        "type": "video"
+      },
+      {
+        "nodeId": "qxpYr1kQih",
+        "name": "文本节点 2 - 副本",
+        "type": "text",
+        "textState": "ready"
+      },
+      {
+        "nodeId": "wibgBN2cmT",
+        "name": "图片节点 4",
+        "type": "image"
+      },
+      {
+        "nodeId": "jDfkIX6nEq",
+        "name": "1024",
+        "type": "image"
+      },
+      {
+        "nodeId": "IutwBaWOil",
+        "name": "文本节点 2",
+        "type": "text",
+        "textState": "ready"
+      }
+    ],
+    "assets": [
+      {
+        "id": "9893c9f928540c7a9f0c1ccd",
+        "kind": "video",
+        "name": "视频节点 5",
+        "nodeIds": [
+          "vkKOAJDhuy"
+        ],
+        "url": "https://cdn.example.com/video.mp4",
+        "previewUrl": "",
+        "resourceId": "",
+        "source": "generated",
+        "role": "node",
+        "ratio": "16:9",
+        "fileName": "视频_0001_视频节点 5.mp4",
+        "state": "pending",
+        "error": "",
+        "bytes": 0,
+        "total": 0,
+        "associatedTexts": [
+          {
+            "nodeId": "qxpYr1kQih",
+            "name": "文本节点 2 - 副本",
+            "text": "将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。",
+            "rawText": "```\n将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。\n```",
+            "textSource": "parameter-content",
+            "textState": "ready",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "parameterText": "```\n将提供的 3x4 项目动画化，制作成流畅的电影级视频。\n保持镜头顺序和连贯性。运用缓慢的侧光阴影移动、面料 纹理特写、主体轮廓展现以及室内摆放的航拍漂移效果。\n\n灯光从冷白色的展厅光过渡到温暖的午后侧光阴影。\n呈现家具专题美学，体现雕塑般的克制感与生活化的完美氛围。\n无需新增镜头，无需重新排序，休闲椅始终是所有场景中的情感焦点。\n```",
+            "textVersion": "parameter-content",
+            "textMismatch": false,
+            "relation": "当前生成配置引用",
+            "textKey": "text-4703233bad465ee9ffe2",
+            "targetNodeId": "vkKOAJDhuy"
+          }
+        ]
+      },
+      {
+        "id": "199764c94ee744de77721f8d",
+        "kind": "image",
+        "name": "图片节点 4",
+        "nodeIds": [
+          "wibgBN2cmT"
+        ],
+        "url": "https://cdn.example.com/grid.png",
+        "previewUrl": "https://cdn.example.com/grid.png",
+        "previewUrls": [
+          "https://cdn.example.com/grid.png"
+        ],
+        "resourceId": "",
+        "source": "generated",
+        "role": "node",
+        "ratio": "16:9",
+        "fileName": "图片_0001_图片节点 4.png",
+        "state": "pending",
+        "error": "",
+        "bytes": 0,
+        "total": 0,
+        "associatedTexts": [
+          {
+            "nodeId": "IutwBaWOil",
+            "name": "文本节点 2",
+            "text": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+            "rawText": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+            "textSource": "parameter-content",
+            "textState": "ready",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "parameterText": "创建一个 4:3 的高端家具提案演示文稿项目，采用 3x4 网格（共 12 帧）的编辑布局，风格对标 Poltrona Frau/B&B Italia，主体请 产品参考图片。结构流程：材质 → 形态 → 比例 → 摆放 → 生活场景闭环。每帧拆分：上方为电影级图像（无文字），下方为项目备注。采用意大利现代主义极简美学，营造家具即雕塑的氛围，体现考究的生活方式。一把置于侧光下的主体是贯穿始终的情感核心。",
+            "textVersion": "parameter-content",
+            "textMismatch": false,
+            "relation": "当前生成配置引用",
+            "textKey": "text-532f60f5e7c0b0885eeb",
+            "targetNodeId": "wibgBN2cmT"
+          }
+        ]
+      },
+      {
+        "id": "a6c090b088276d1e5690285b",
+        "kind": "image",
+        "name": "1024",
+        "nodeIds": [
+          "jDfkIX6nEq"
+        ],
+        "url": "https://cdn.example.com/chair.jpg",
+        "previewUrl": "https://cdn.example.com/chair.jpg",
+        "previewUrls": [
+          "https://cdn.example.com/chair.jpg"
+        ],
+        "resourceId": "",
+        "source": "unknown",
+        "role": "node",
+        "ratio": "",
+        "fileName": "图片_0002_1024.jpg",
+        "state": "pending",
+        "error": "",
+        "bytes": 0,
+        "total": 0,
+        "associatedTexts": []
+      }
+    ]
+  },
+  "jimeng": {
+    "schemaVersion": 2,
+    "metadata": {
+      "platform": "jimeng",
+      "title": "即梦文本引用验证",
+      "author": "测试",
+      "inputUrl": "https://jimeng.jianying.com/ai-tool/ai-canvas/795fb0a4-7d6d-44e1-8c61-f29e4a3fd5dd",
+      "canvasUrl": "https://jimeng.jianying.com/ai-tool/ai-canvas/795fb0a4-7d6d-44e1-8c61-f29e4a3fd5dd",
+      "extractedAt": "2026-10-09T00:00:00.000Z"
+    },
+    "diagnostics": {
+      "source": "jimeng-draft-document",
+      "nodeCount": 3,
+      "edgeCount": 2,
+      "expectedNodes": 3,
+      "directEntryCount": 2,
+      "directGenerationCount": 1,
+      "readableTextCount": 1,
+      "unreadableTextCount": 0,
+      "linkedGenerationCount": 2,
+      "referenceOnlyCount": 1,
+      "counts": {
+        "video": 1,
+        "image_text": 0,
+        "image_reference": 0,
+        "image_unknown": 1,
+        "audio": 0,
+        "text": 1
+      },
+      "skipped": [],
+      "warnings": [
+        "部分图片生成模式未确认，仍归入图片提示词；保留读取到的原始参数。",
+        "读取的是当前节点参数与关联文本；仅连线不代表生成用途，尚未核验历史资产生成时的完整提示词。"
+      ]
+    },
+    "entries": [
+      {
+        "nodeId": "node_zbjqzq5xnn",
+        "name": "文本 1",
+        "group": "未分组",
+        "position": {},
+        "references": [],
+        "referenceTexts": [],
+        "kind": "text",
+        "prompt": "v1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+        "promptSource": "text-node",
+        "settings": {},
+        "text": "v1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+        "rawText": "\u0000rt-md:v1\nv1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+        "textSource": "node-text",
+        "textState": "ready",
+        "textUsage": "generation-input",
+        "linkedNodeIds": [
+          "node_c42pcgb9bm",
+          "node_4nfg55ejxq"
+        ],
+        "connectionStatus": "shared",
+        "outputAssetIds": []
+      },
+      {
+        "nodeId": "node_c42pcgb9bm",
+        "name": "图片 1",
+        "group": "未分组",
+        "position": {},
+        "references": [
+          {
+            "index": 1,
+            "slotId": "62d64f13-264b-461b-881b-05d1dd4d32e3",
+            "nodeId": "node_zbjqzq5xnn",
+            "type": "text",
+            "name": "文本 1",
+            "role": "reference",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "assetIds": []
+          }
+        ],
+        "referenceTexts": [
+          {
+            "nodeId": "node_zbjqzq5xnn",
+            "name": "文本 1",
+            "text": "v1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+            "rawText": "\u0000rt-md:v1\nv1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+            "textSource": "node-text",
+            "textState": "ready",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "textVersion": "current-node",
+            "textMismatch": false,
+            "relation": "当前生成配置引用",
+            "textKey": "text-2b9d809dc4464c8ad3af"
+          }
+        ],
+        "kind": "image_unknown",
+        "prompt": "",
+        "promptSource": "reference-text-only",
+        "settings": {
+          "modelName": "seedream_5.0_lite",
+          "aspectRatio": "1:1",
+          "resolution": "2K",
+          "outputCount": 1
+        },
+        "model": "seedream_5.0_lite",
+        "rawParts": [],
+        "warnings": [],
+        "outputAssetIds": []
+      },
+      {
+        "nodeId": "node_4nfg55ejxq",
+        "name": "视频 1",
+        "group": "未分组",
+        "position": {},
+        "references": [
+          {
+            "index": 1,
+            "slotId": "bbf6c160-d90d-4340-aef7-4e38dfc477de",
+            "nodeId": "node_zbjqzq5xnn",
+            "type": "text",
+            "name": "文本 1",
+            "role": "reference",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "assetIds": []
+          }
+        ],
+        "referenceTexts": [
+          {
+            "nodeId": "node_zbjqzq5xnn",
+            "name": "文本 1",
+            "text": "v1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+            "rawText": "\u0000rt-md:v1\nv1.1 读取验证：电影质感，柔和侧光。\n\n第二段：保持角色与场景一致。",
+            "textSource": "node-text",
+            "textState": "ready",
+            "evidence": [
+              "parameter-reference",
+              "canvas-edge"
+            ],
+            "textVersion": "current-node",
+            "textMismatch": false,
+            "relation": "当前生成配置引用",
+            "textKey": "text-2b9d809dc4464c8ad3af"
+          }
+        ],
+        "kind": "video",
+        "prompt": "v1.1 视频直接提示词：缓慢推进镜头。",
+        "promptSource": "generation-draft",
+        "settings": {
+          "mode": "multiModal",
+          "modelName": "seedance_2.0_vip",
+          "aspectRatio": "16:9",
+          "resolution": "720p",
+          "durationSeconds": 4,
+          "isLongVideo": false,
+          "outputCount": 1
+        },
+        "model": "seedance_2.0_vip",
+        "rawParts": [
+          {
+            "type": "text",
+            "text": "v1.1 视频直接提示词：缓慢推进镜头。"
+          }
+        ],
+        "warnings": [],
+        "outputAssetIds": []
+      }
+    ],
+    "edges": [
+      {
+        "source": "node_zbjqzq5xnn",
+        "target": "node_c42pcgb9bm",
+        "type": "reference"
+      },
+      {
+        "source": "node_zbjqzq5xnn",
+        "target": "node_4nfg55ejxq",
+        "type": "reference"
+      }
+    ],
+    "nodeSummaries": [
+      {
+        "nodeId": "node_zbjqzq5xnn",
+        "name": "文本 1",
+        "type": "text",
+        "textState": "ready"
+      },
+      {
+        "nodeId": "node_c42pcgb9bm",
+        "name": "图片 1",
+        "type": "image"
+      },
+      {
+        "nodeId": "node_4nfg55ejxq",
+        "name": "视频 1",
+        "type": "video"
+      }
+    ],
+    "assets": []
+  }
+}

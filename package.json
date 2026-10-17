@@ -1,30 +1,43 @@
 {
   "name": "canvas-prompt-extractor",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
-  "description": "自由画布提取 Windows 便携版",
+  "description": "自由画布提取：作者主页选集与多作品批量下载",
   "main": "src/main.cjs",
   "scripts": {
     "build": "node scripts/build.cjs",
-    "test": "node --test tests/*.test.cjs",
+    "test": "node \"开发辅助/验收工具/test.cjs\"",
+    "check": "eslint --config \"开发辅助/工具配置/eslint.config.js\" src scripts \"开发辅助/验收工具\" \"开发辅助/测试代码\"",
     "start": "node scripts/start.cjs",
-    "verify:ui": "node scripts/start.cjs --verify-ui",
+    "verify:ui": "node scripts/start.cjs --verify-v12",
+    "verify:transfer": "node \"开发辅助/验收工具/verify-transfer.cjs\"",
     "verify:live": "node scripts/start.cjs --verify-live",
-    "verify:layout": "node scripts/start.cjs --verify-v08",
-    "verify:readers": "node scripts/verify-reader-navigation.cjs",
-    "verify:accounts": "node scripts/verify-account-state.cjs",
+    "verify:readers": "node \"开发辅助/验收工具/verify-reader-navigation.cjs\"",
+    "verify:accounts": "node \"开发辅助/验收工具/verify-account-state.cjs\"",
     "verify:account-startup": "node scripts/start.cjs --verify-account-startup",
     "verify:browser-reset": "node scripts/start.cjs --verify-browser-reset",
     "verify:local-project": "node scripts/start.cjs --verify-local-project",
-    "verify:cleanup": "node scripts/verify-extraction-cleanup.cjs",
-    "verify:themes": "node scripts/verify-themes.cjs",
-    "package:portable": "node scripts/package-portable.cjs",
+    "verify:cleanup": "node \"开发辅助/验收工具/verify-extraction-cleanup.cjs\"",
+    "verify:themes": "node \"开发辅助/验收工具/verify-themes.cjs\"",
     "verify:deadline": "node scripts/start.cjs --verify-read-deadline",
-    "verify:portable": "node scripts/verify-portable.cjs"
+    "verify:text": "node \"开发辅助/验收工具/check-electron.cjs\" verify-text-reader.cjs",
+    "verify:browser-toolbar": "node \"开发辅助/验收工具/check-electron.cjs\" verify-browser-toolbar.cjs",
+    "format": "prettier --config \"开发辅助/工具配置/.prettierrc.json\" --write \"src/**/*.{js,cjs}\" \"scripts/**/*.cjs\" \"开发辅助/验收工具/**/*.cjs\" \"开发辅助/测试代码/**/*.cjs\" \"开发辅助/工具配置/eslint.config.js\"",
+    "verify:preservation": "node \"开发辅助/验收工具/verify-v12-preservation.cjs\"",
+    "format:check": "prettier --config \"开发辅助/工具配置/.prettierrc.json\" --check \"src/**/*.{js,cjs}\" \"scripts/**/*.cjs\" \"开发辅助/验收工具/**/*.cjs\" \"开发辅助/测试代码/**/*.cjs\" \"开发辅助/工具配置/eslint.config.js\"",
+    "verify:authors": "node \"开发辅助/验收工具/verify-authors.cjs\"",
+    "verify:authors-ui": "node \"开发辅助/验收工具/verify-authors-ui.cjs\""
   },
   "productName": "自由画布提取",
   "devDependencies": {
-    "electron": "44.5.1"
+    "electron": "44.5.1",
+    "esbuild": "0.28.2",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.9"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

@@ -14,6 +14,23 @@
 #reading-board:not([data-layout=side]) .citing-strip { grid-row: 5; }
 .reading-card.is-collapsed .citing-strip { display: none; }
 
+.linked-text { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
+.linked-text summary { cursor: pointer; font-size: 14px; overflow-wrap: anywhere; }
+.linked-text-body { padding-top: 8px; }
+.linked-text pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 8px 0; }
+.text-provenance { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 0 8px; }
+.linked-text-actions, .text-role { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.linked-text-actions button { font-size: 12px; }
+.text-role { margin-bottom: 12px; }
+.text-role-label { font-size: 12px; }
+.text-role .text-provenance { margin: 0; }
+#reading-board[data-layout=side] .reading-card.is-text .reading-content { grid-template-columns: minmax(0,1fr); }
+#reading-board[data-layout=side] .reading-card.is-text .prompt-shell { min-height: 160px; height: auto; }
+.content-summary { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 12px 0 0; }
+.reading-card.no-media .visual-col { display: none !important; }
+.reading-card.no-media .reading-content { display: block !important; }
+.reading-card.no-media .prompt-shell { height: var(--prompt-height,clamp(240px,45vh,560px)) !important; flex: none !important; }
+
 /* An invisible 8px target on the outer bottom border, outside the content flow. */
 .reading-card { position: relative; }
 .reading-card > .resize-handle {

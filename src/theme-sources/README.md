@@ -25,4 +25,4 @@ Linear、Notion、北欧浅色、一浅色参考公开主题生成器中的数�
 
 中文名称采用界面显示译名。GitHub、Linear、Notion、Codex 和 Ayu、Gruvbox、Monokai 等品牌或专名保留原名；内部 ID 保持稳定，与显示名称独立。
 
-新增/修改参考配置后运行 `node scripts/build.cjs`。开发用导入脚本是 `scripts/import-theme-references.py`；应用运行与切换主题不需要联网。
+新增/修改参考配置后运行 `node scripts/build.cjs`。开发用导入脚本是 `开发辅助/验收工具/import-theme-references.py`；应用运行与切换主题不需要联网。

@@ -1,22 +1,94 @@
 'use strict';
-// These local modules use only named exports and single-line imports.
-// Join them into a browser script without a package manager or external UI library.
-const fs=require('node:fs/promises'),path=require('node:path');
-async function build(){const root=path.resolve(__dirname,'..'),ui=path.join(root,'src/ui');const files=['view-model.js','reader-targets.js','prompt-display.js','video-sample.js','preview-pool.js','video-cover-queue.js','thumbnails.js','interactions.js','appearance-dropdown.js','theme-manager.js','typography-manager.js','renderer.js'];const parts=[];
-  const themePath=path.join(root,'src/theme.cjs'),themeSource=await fs.readFile(themePath,'utf8');
-  delete require.cache[require.resolve(themePath)];const theme=require(themePath);
-  await fs.writeFile(path.join(root,'src/theme-catalog.js'),'/* Generated from theme.cjs and theme-library.json. */\nwindow.CanvasThemes=(()=>{const module={exports:{}};\n'+themeSource.replace("require('./theme-library.json')",JSON.stringify(theme.THEME_LIBRARY))+'\nreturn module.exports;})();\n');
-  await fs.writeFile(path.join(root,'src/themes.css'),theme.themeCss());
-  const typographyPath=path.join(root,'src/typography.cjs'),typographySource=await fs.readFile(typographyPath,'utf8');
-  delete require.cache[require.resolve(typographyPath)];const typography=require(typographyPath);
-  for(const font of Object.values(typography.FONTS).filter(font=>font.file)) {
-    const bytes=await fs.readFile(path.join(root,'src',font.file));
-    if(font.format==='woff2'&&bytes.subarray(0,4).toString()!=='wOF2')throw new Error('Invalid bundled font: '+font.file);
-    if(!font.license)throw new Error('Bundled font license missing: '+font.file);
-    await fs.access(path.join(root,'src',font.license));
+const fs = require('node:fs/promises'),
+  path = require('node:path'),
+  esbuild = require('esbuild');
+async function build() {
+  const root = path.resolve(__dirname, '..'),
+    out = path.join(root, 'build');
+  await fs.mkdir(out, { recursive: true });
+  const theme = require('../src/theme.cjs'),
+    typography = require('../src/typography.cjs');
+  for (const font of Object.values(typography.FONTS).filter((font) => font.file)) {
+    const original = path.join(root, 'src', font.file),
+      bytes = await fs.readFile(original);
+    if (font.format === 'woff2' && bytes.subarray(0, 4).toString() !== 'wOF2')
+      throw new Error('Invalid bundled font: ' + font.file);
+    if (!font.license) throw new Error('Bundled font license missing: ' + font.file);
+    await fs.access(path.join(root, 'src', font.license));
+    const target = path.join(out, font.file);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.copyFile(original, target);
   }
-  await fs.writeFile(path.join(root,'src/typography-catalog.js'),'/* Generated from typography.cjs. */\nwindow.PromptTypography=(()=>{const module={exports:{}};\n'+typographySource+'\nreturn module.exports;})();\n');
-  await fs.writeFile(path.join(root,'src/typography-assets.css'),typography.fontCss());
-  for(const file of files){const source=await fs.readFile(path.join(ui,file),'utf8');parts.push('// '+file+'\n'+source.replace(/^import .+;\s*$/gm,'').replace(/^export (?=(?:const|function|class)\b)/gm,''));}
-  await fs.writeFile(path.join(ui,'app.js'),"(()=>{\n'use strict';\n"+parts.join('\n')+'\n})();\n');await fs.writeFile(path.join(ui,'build-info.json'),JSON.stringify({version:JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8')).version,ui:'native',modules:files},null,2));console.log('Built native UI without external dependencies.');}
-module.exports=build;if(require.main===module)build().catch(e=>{console.error(e);process.exitCode=1;});
+  const common = {
+    bundle: true,
+    platform: 'browser',
+    format: 'iife',
+    target: 'es2022',
+    logLevel: 'warning',
+    absWorkingDir: root
+  };
+  await esbuild
+    .build({
+      ...common,
+      entryPoints: ['src/ui/renderer.js'],
+      outfile: path.join(out, 'app.js'),
+      sourcemap: true,
+      metafile: true
+    })
+    .then(async (result) => {
+      await fs.writeFile(
+        path.join(out, 'build-info.json'),
+        JSON.stringify(
+          {
+            version: require('../package.json').version,
+            ui: 'native',
+            inputs: Object.keys(result.metafile.inputs)
+          },
+          null,
+          2
+        )
+      );
+    });
+  await esbuild.build({
+    ...common,
+    stdin: { contents: "window.CanvasThemes=require('./src/theme.cjs');", resolveDir: root },
+    outfile: path.join(out, 'theme-catalog.js')
+  });
+  await esbuild.build({
+    ...common,
+    stdin: {
+      contents: "window.PromptTypography=require('./src/typography.cjs');",
+      resolveDir: root
+    },
+    outfile: path.join(out, 'typography-catalog.js')
+  });
+  await fs.writeFile(path.join(out, 'themes.css'), theme.themeCss());
+  await fs.writeFile(path.join(out, 'typography-assets.css'), typography.fontCss());
+  for (const file of [
+    'src/ui/index.html',
+    'src/feedback/index.html',
+    'src/browser-toolbar/index.html'
+  ]) {
+    const html = await fs.readFile(path.join(root, file), 'utf8');
+    for (const match of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)) {
+      const value = match[1];
+      if (value.startsWith('#') || /^[a-z]+:/i.test(value)) continue;
+      const asset = path.resolve(root, path.dirname(file), value.split('?')[0]);
+      if (!asset.startsWith(root + path.sep)) throw new Error('UI asset outside project: ' + value);
+      await fs.access(asset).catch(() => {
+        throw new Error('Missing UI asset in ' + file + ': ' + value);
+      });
+    }
+  }
+  console.log(
+    'Built v' +
+      require('../package.json').version +
+      ' with explicit module dependencies into build/.'
+  );
+}
+module.exports = build;
+if (require.main === module)
+  build().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

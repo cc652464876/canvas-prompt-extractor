@@ -25,3 +25,5 @@
 }
 .prompt-text .ref-chip-label { font: inherit; white-space: nowrap; text-overflow: clip; }
 .prompt-text .linked-text pre { font-family: var(--prompt-font-family); font-size: var(--prompt-font-size); line-height: var(--prompt-line-height); }
+.text-preview { position: static; inset: auto; max-height: 72vh; overflow: auto; padding: 12px; }
+.text-preview pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }

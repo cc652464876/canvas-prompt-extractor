@@ -1,0 +1,6 @@
+nodeLinker: hoisted
+# Generated command shims should not retain the installation directory.
+extendNodePath: false
+allowBuilds:
+  electron: true
+  esbuild: true
