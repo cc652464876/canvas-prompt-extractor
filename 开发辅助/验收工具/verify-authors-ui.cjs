@@ -54,7 +54,8 @@ if (!process.versions.electron) {
       });
       let current,
         project,
-        publications = 0;
+        publications = 0,
+        selectionRequests = 0;
       const send = (type, payload) => win.webContents.send('lab:event', { type, payload });
       const works = Array.from({ length: 10 }, (_, i) => ({
         templateUuid: (i + 1).toString(16).padStart(32, '0'),
@@ -117,7 +118,10 @@ if (!process.versions.electron) {
       const handlers = {
         info: () => ({ platforms: [], options, outputDirectory: out, accounts: [] }),
         author: (input) => service.open(input),
-        'author-select': (ids) => service.select(ids),
+        'author-select': (ids) => {
+          selectionRequests++;
+          return service.select(ids);
+        },
         'author-read': () => service.start(),
         'author-retry': (id) => service.retry(id),
         theme: () => ({}),
@@ -235,6 +239,60 @@ if (!process.versions.electron) {
           failed: 0,
           authorWorkIds: current.authorProfile.loadedIds.slice(0, 2)
         };
+        send('downloads', downloadSnapshot);
+        await run(`
+          document.getElementById('columns').value = 5;
+          document.getElementById('columns').dispatchEvent(new Event('input'));
+          document.getElementById('author-works').scrollIntoView({block:'center'});
+        `);
+        await wait(100);
+        for (const selected of [false, true]) {
+          const position = await run(`(() => {
+            window.progressWorkCard = document.querySelector('.work-card');
+            window.progressWorkCover = progressWorkCard.querySelector('.cover');
+            progressWorkCard.focus({preventScroll:true});
+            const rect = progressWorkCard.getBoundingClientRect();
+            return {x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2)};
+          })()`);
+          const requestsBeforeClick = selectionRequests;
+          win.webContents.sendInputEvent({ type: 'mouseMove', ...position });
+          win.webContents.sendInputEvent({
+            type: 'mouseDown',
+            button: 'left',
+            clickCount: 1,
+            ...position
+          });
+          for (let tick = 0; tick < 6; tick++) {
+            send('downloads', { ...downloadSnapshot, speeds: { image: 1024 * (tick + 1) } });
+            service.refresh({ assetsOnly: true });
+            await wait(25);
+          }
+          assert.equal(
+            await run(`progressWorkCard === document.querySelector('.work-card')`),
+            true
+          );
+          assert.equal(
+            await run(`progressWorkCover === document.querySelector('.work-card .cover')`),
+            true
+          );
+          assert.equal(await run(`document.activeElement === progressWorkCard`), true);
+          win.webContents.sendInputEvent({
+            type: 'mouseUp',
+            button: 'left',
+            clickCount: 1,
+            ...position
+          });
+          await until(() =>
+            run(
+              `document.querySelector('.work-card').getAttribute('aria-pressed') === '${selected}' && !document.querySelector('.work-card').disabled`
+            )
+          );
+          assert.equal(selectionRequests, requestsBeforeClick + 1);
+          assert.equal(service.snapshot().selectedIds.includes(works[0].templateUuid), selected);
+        }
+        check(
+          '按住作者卡片期间连续更新下载进度与素材状态，卡片、封面和焦点保持不变；单击即可切换选择'
+        );
         const unavailableSnapshot = {
           ...downloadSnapshot,
           failed: 1,

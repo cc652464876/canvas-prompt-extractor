@@ -10,7 +10,8 @@ export function createAuthorControls({
     selected = new Set(),
     pending = 0,
     sortByCanvas = false,
-    hideUnpublished = false;
+    hideUnpublished = false,
+    renderedGrid = null;
   const visibleWorks = () =>
     (profile?.works || []).filter((work) => !hideUnpublished || work.canvasAccess !== 'not-public');
   const accessText = (work) =>
@@ -52,7 +53,10 @@ export function createAuthorControls({
   function render() {
     const section = $('author-section');
     section.hidden = !profile;
-    if (!profile) return;
+    if (!profile) {
+      renderedGrid = null;
+      return;
+    }
     const visible = visibleWorks(),
       visibleIds = new Set(visible.map((work) => work.id)),
       allowedSelection = [...selected].filter((id) => visibleIds.has(id));
@@ -89,6 +93,11 @@ export function createAuthorControls({
     grid.style.setProperty('--columns', String(columns || 3));
     grid.dataset.dense = String(columns >= 7);
     grid.dataset.text = String(columns === 0);
+    // Progress updates can arrive between pointer-down and pointer-up. Keep
+    // unchanged cards mounted so hover, focus and the pending click survive.
+    const gridState = [profile, selected, columns, locked, sortByCanvas, hideUnpublished];
+    if (renderedGrid?.every((value, index) => value === gridState[index])) return;
+    renderedGrid = gridState;
     grid.replaceChildren();
     if (!visible.length)
       grid.append(
