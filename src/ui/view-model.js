@@ -39,9 +39,13 @@ export function aspect(asset) {
   const m = String(asset?.ratio || '').match(/^(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)$/);
   return m && Number(m[1]) > 0 && Number(m[2]) > 0 ? Number(m[1]) / Number(m[2]) : 16 / 9;
 }
+export function imageBrandQuery(query = '') {
+  return /^(mj|midjourney)$/i.test(query.trim()) ? 'Midjourney' : '';
+}
 export function filtered(result, scope, kind, query = '') {
   if (!result) return [];
-  const q = query.trim().toLowerCase();
+  const q = query.trim().toLowerCase(),
+    brand = scope === 'assets' ? imageBrandQuery(query) : '';
   const items =
     scope === 'assets'
       ? boardAssets(result).sort(
@@ -56,18 +60,20 @@ export function filtered(result, scope, kind, query = '') {
         : Array.isArray(kind)
           ? kind.includes(category) || kind.includes(item.kind)
           : kind === 'all' || category === kind || item.kind === kind) &&
-      [
-        item.name,
-        item.group,
-        item.prompt,
-        MEDIA[category],
-        TYPES[category],
-        ...(item.referenceTexts || []).map((r) => r.text)
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(q)
+      (brand
+        ? item.kind === 'image' && item.imageBrand === brand
+        : [
+            item.name,
+            item.group,
+            item.prompt,
+            MEDIA[category],
+            TYPES[category],
+            ...(item.referenceTexts || []).map((r) => r.text)
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(q))
     );
   });
 }

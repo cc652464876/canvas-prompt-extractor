@@ -6,6 +6,16 @@ async function build() {
   const root = path.resolve(__dirname, '..'),
     out = path.join(root, 'build');
   await fs.mkdir(out, { recursive: true });
+  // Keep the entire relocatable Windows distribution, including its runtime.
+  for (const name of [
+    'exiftool.exe',
+    'exiftool_files/perl.exe',
+    'exiftool_files/exiftool.pl',
+    'exiftool_files/LICENSE'
+  ])
+    await fs.access(path.join(root, 'tools', 'exiftool', name)).catch(() => {
+      throw new Error('内置图片信息工具不完整，请保留 tools/exiftool 及配套文件：' + name);
+    });
   // The canvas now uses the shared browser toolbar; remove its obsolete UI bundle.
   for (const file of ['canvas-browser.js', 'canvas-browser.js.map'])
     await fs.rm(path.join(out, file), { force: true });

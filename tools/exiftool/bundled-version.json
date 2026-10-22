@@ -1,0 +1,11 @@
+{
+  "version": "13.59",
+  "platform": "win32-x64",
+  "source": "https://exiftool.org/",
+  "sha256": {
+    "exiftool.exe": "68c079c32fdae0d6c7130e9a5fb73f8ac9dabdf9ab8da312da4f6c549d6d3385",
+    "exiftool_files/perl.exe": "4d61ebe19311dbf7b9710ac2c6c402e3cba3e23b63e8b82be88e471343bed52d",
+    "exiftool_files/perl532.dll": "cfb80cfad6b868dab14f6a12083e4f3cb5714ac23b1b0e5a96f09144b116ab4c",
+    "exiftool_files/exiftool.pl": "9e8e817fab9fdc2e37f7cd023aa34e76d1ef561834dfd791a48a7e327cc8f4b1"
+  }
+}

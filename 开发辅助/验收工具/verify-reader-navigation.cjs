@@ -34,7 +34,8 @@ if (!process.versions.electron) {
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   app.whenReady().then(async () => {
     const errors = [],
-      checks = [];
+      checks = [],
+      revealed = [];
     let ui;
     try {
       const session = require('electron').session.fromPartition('reader-navigation-fixture');
@@ -44,15 +45,12 @@ if (!process.versions.electron) {
         'labmedia',
         () => new Response(svg, { headers: { 'content-type': 'image/svg+xml' } })
       );
-      for (const channel of [
-        'theme',
-        'update',
-        'reveal',
-        'cache-thumbnail',
-        'thumbnail-info',
-        'copy-text'
-      ])
+      for (const channel of ['theme', 'update', 'cache-thumbnail', 'thumbnail-info', 'copy-text'])
         ipcMain.handle('lab:' + channel, () => ({ ok: true, value: null }));
+      ipcMain.handle('lab:reveal', (_event, id) => {
+        revealed.push(id);
+        return { ok: true, value: null };
+      });
       ipcMain.handle('lab:info', () => ({
         ok: true,
         value: { outputDirectory: '测试数据', options: { mode: 'full' } }
@@ -164,7 +162,7 @@ if (!process.versions.electron) {
       await click('[data-key="assets:a66"] .card-heading');
       assert.equal(await count(), 1);
       assert.equal(
-        await run(`document.querySelector('.prompt-inner').textContent`),
+        await run(`document.querySelector('.prompt-inner > div:first-child').textContent`),
         '素材自身提示词'
       );
       assert.equal(await run(`document.querySelector('.asset-info')`), null);
@@ -259,19 +257,173 @@ if (!process.versions.electron) {
       await preview('.inline-ref');
       await click('#media-dialog-reader');
       assert.equal(
-        await run(`document.querySelector('.reading-card.focused .prompt-inner').textContent`),
+        await run(
+          `document.querySelector('.reading-card.focused .prompt-inner > div:first-child').textContent`
+        ),
         'A 提示词'
       );
       await click('[data-key="prompts:bConsumer"] .card-heading');
-      await preview('[data-key="prompts:bConsumer"].reading-card .ref-thumb');
+      const referenceSelector = '[data-key="prompts:bConsumer"].reading-card .ref-thumb';
+      await run(
+        `document.querySelector(${j(referenceSelector)}).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}))`
+      );
+      await wait(100);
+      assert.equal(revealed.at(-1), 'shared');
+      assert.equal(await run(`document.getElementById('media-dialog').open`), false);
+      assert.equal(await run(`document.querySelector(${j(referenceSelector)}+' .ref-name')`), null);
+      await click(referenceSelector);
+      await until(`document.getElementById('media-dialog').open`);
       await click('#media-dialog-reader');
       assert.equal(
-        await run(`document.querySelector('.reading-card.focused .prompt-inner').textContent`),
+        await run(
+          `document.querySelector('.reading-card.focused .prompt-inner > div:first-child').textContent`
+        ),
         'B 提示词'
       );
       assert.equal(await count(), 4);
       check(
         'Inline and thumbnail references preserve exact IDs for same-name nodes sharing a file'
+      );
+      check('Reference thumbnails have no name panel; left click previews and right click locates');
+      const expandSelector = '[data-key="prompts:bConsumer"] .prompt-expand';
+      const headingAlignment = await run(
+        `(()=>{const h=document.querySelector('[data-key="prompts:bConsumer"] .prompt-heading'),b=h.querySelector('.prompt-expand').getBoundingClientRect(),w=h.querySelector('.work-source').getBoundingClientRect();return Math.abs(b.top+b.height/2-w.top-w.height/2);})()`
+      );
+      assert.ok(headingAlignment < 1);
+      await click(expandSelector);
+      await until(`document.getElementById('prompt-dialog').open`);
+      assert.equal(
+        await run(`document.querySelectorAll('#prompt-dialog input[type=range]').length`),
+        2
+      );
+      assert.equal(
+        await run(`document.querySelector('#prompt-dialog .prompt-inner').textContent`),
+        '同名节点'
+      );
+      assert.equal(await run(`document.querySelectorAll('#prompt-dialog .ref-thumb').length`), 1);
+      assert.equal(
+        await run(
+          `document.querySelectorAll('#prompt-dialog .ref-name,#prompt-dialog .detail-actions').length`
+        ),
+        0
+      );
+      await run(
+        `(()=>{const media=document.querySelector('#prompt-dialog .prompt-media-size'),text=document.querySelector('#prompt-dialog .prompt-text-size');media.value='144';media.dispatchEvent(new Event('input',{bubbles:true}));text.value='22';text.dispatchEvent(new Event('input',{bubbles:true}));})()`
+      );
+      const popup = await run(
+        `(()=>{const d=document.getElementById('prompt-dialog'),r=d.getBoundingClientRect(),thumb=d.querySelector('.ref-thumb').getBoundingClientRect(),text=d.querySelector('.prompt-text'),chip=d.querySelector('.inline-ref img');return{box:{left:r.left,top:r.top,width:r.width,height:r.height,right:r.right,bottom:r.bottom},thumbWidth:thumb.width,thumbHeight:thumb.height,textSize:getComputedStyle(text).fontSize,chipSize:getComputedStyle(chip).width,mainSize:getComputedStyle(document.documentElement).getPropertyValue('--prompt-font-size').trim(),refAbove:thumb.bottom<text.getBoundingClientRect().top,resize:getComputedStyle(d).resize};})()`
+      );
+      assert.equal(popup.thumbWidth, 144);
+      assert.equal(popup.thumbHeight, 81);
+      assert.equal(popup.textSize, '22px');
+      assert.equal(popup.chipSize, '25px');
+      assert.equal(popup.mainSize, '14px');
+      assert.equal(popup.refAbove, true);
+      assert.equal(popup.resize, 'both');
+      const popupAlignment = await run(
+        `(()=>{const d=document.getElementById('prompt-dialog'),c=d.querySelector('.prompt-dialog-controls'),r=[...c.children].map(n=>n.getBoundingClientRect()),thumb=d.querySelector('.ref-thumb').getBoundingClientRect(),text=d.querySelector('.prompt-inner').getBoundingClientRect();return{count:r.length,text:c.textContent,sliderWidthDifference:Math.abs(r[0].width-r[1].width),centerDifference:Math.max(...r.map(b=>b.top+b.height/2))-Math.min(...r.map(b=>b.top+b.height/2)),textLeftDifference:Math.abs(thumb.left-text.left),rightInset:d.getBoundingClientRect().right-text.right};})()`
+      );
+      assert.equal(popupAlignment.count, 3);
+      assert.equal(popupAlignment.text.trim(), '');
+      assert.ok(popupAlignment.sliderWidthDifference < 1);
+      assert.ok(popupAlignment.centerDifference < 1);
+      assert.ok(popupAlignment.textLeftDifference < 1);
+      assert.ok(popupAlignment.rightInset >= 28);
+      await until(`document.querySelector('#prompt-dialog .ref-thumb img')?.naturalWidth>0`);
+      await run(
+        `document.querySelector('#prompt-dialog .ref-thumb').dispatchEvent(new MouseEvent('mouseenter'))`
+      );
+      await until(
+        `!document.getElementById('hover-preview').hidden && document.getElementById('hover-preview').matches(':popover-open')`
+      );
+      await fs.writeFile(
+        verificationPath(root, 'prompt-hover-top-layer.png'),
+        (await ui.webContents.capturePage()).toPNG()
+      );
+      await run(
+        `document.querySelector('#prompt-dialog .ref-thumb').dispatchEvent(new MouseEvent('mouseleave'))`
+      );
+      assert.equal(
+        await run(`document.getElementById('hover-preview').matches(':popover-open')`),
+        false
+      );
+      const x = Math.round(popup.box.right - 4),
+        y = Math.round(popup.box.bottom - 4);
+      ui.webContents.sendInputEvent({ type: 'mouseMove', x, y });
+      ui.webContents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 });
+      ui.webContents.sendInputEvent({
+        type: 'mouseMove',
+        x: x - 180,
+        y: y - 120,
+        modifiers: ['leftButtonDown']
+      });
+      ui.webContents.sendInputEvent({
+        type: 'mouseUp',
+        x: x - 180,
+        y: y - 120,
+        button: 'left',
+        clickCount: 1
+      });
+      await wait(150);
+      const resized = await run(
+        `(()=>{const r=document.getElementById('prompt-dialog').getBoundingClientRect();return{width:r.width,height:r.height};})()`
+      );
+      assert.ok(resized.width < popup.box.width - 100, JSON.stringify(resized));
+      assert.ok(resized.height < popup.box.height - 60, JSON.stringify(resized));
+      await fs.writeFile(
+        verificationPath(root, 'prompt-dialog.png'),
+        (await ui.webContents.capturePage()).toPNG()
+      );
+      await click('#prompt-dialog .prompt-window-button');
+      assert.equal(await run(`document.getElementById('prompt-dialog').open`), false);
+      assert.equal(
+        await run(
+          `document.querySelector('[data-key="prompts:bConsumer"] .prompt-inner').textContent`
+        ),
+        '同名节点'
+      );
+      assert.equal(
+        await run(
+          `document.querySelector('[data-key="prompts:bConsumer"] .ref-thumb').getBoundingClientRect().width`
+        ),
+        68
+      );
+      await click(expandSelector);
+      await click('#prompt-dialog .ref-thumb');
+      await until(`document.getElementById('media-dialog').open`);
+      await click('#media-dialog-close');
+      assert.equal(await run(`document.getElementById('prompt-dialog').open`), true);
+      ui.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+      ui.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+      await until(`!document.getElementById('prompt-dialog').open`);
+      await run(`document.documentElement.dataset.theme='dark'`);
+      await click(expandSelector);
+      await fs.writeFile(
+        verificationPath(root, 'prompt-dialog-dark.png'),
+        (await ui.webContents.capturePage()).toPNG()
+      );
+      ui.setSize(800, 720);
+      await wait(250);
+      const narrowPrompt = await run(
+        `(()=>{const d=document.getElementById('prompt-dialog'),r=d.getBoundingClientRect(),c=d.querySelector('.prompt-dialog-controls');return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,controlsFit:c.scrollWidth<=c.clientWidth+1};})()`
+      );
+      assert.ok(narrowPrompt.left >= 0 && narrowPrompt.right <= narrowPrompt.width);
+      assert.ok(narrowPrompt.top >= 0 && narrowPrompt.bottom <= narrowPrompt.height);
+      assert.equal(narrowPrompt.controlsFit, true);
+      const narrowControls = await run(
+        `(()=>{const r=[...document.querySelector('.prompt-dialog-controls').children].map(n=>n.getBoundingClientRect());return Math.max(...r.map(b=>b.top+b.height/2))-Math.min(...r.map(b=>b.top+b.height/2));})()`
+      );
+      assert.ok(narrowControls < 1);
+      await click('#prompt-dialog .prompt-window-button');
+      await run(`document.documentElement.dataset.theme='light'`);
+      ui.setSize(1440, 960);
+      await wait(200);
+      check(
+        'Resizable prompt dialog preserves references, independent media/text scales, preview, shrink and Escape restore'
+      );
+      check('Prompt dialog supports dark mode and keeps controls inside narrow windows');
+      check(
+        'Preview uses the top layer; 16:9 references, work-heading button, equal sliders and prompt inset align'
       );
       await click('#clear-readers');
       await click('[data-key="prompts:66"] .card-heading');

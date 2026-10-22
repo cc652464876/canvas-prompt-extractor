@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('lab', {
   directory: () => call('lab:directory'),
   save: (options) => call('lab:save', options),
   saveText: (nodeId) => call('lab:save-text', nodeId),
+  textFile: (nodeId, reveal = false) => call('lab:text-file', nodeId, reveal),
   stopSave: () => call('lab:save-cancel'),
   openFolder: () => call('lab:open-folder'),
   info: () => call('lab:info'),
@@ -31,6 +32,8 @@ contextBridge.exposeInMainWorld('lab', {
   copyText: (text) => call('lab:copy-text', text),
   cacheThumbnail: (id, data) => call('lab:cache-thumbnail', id, data),
   thumbnailInfo: (id) => call('lab:thumbnail-info', id),
+  imageInfo: (id, options) => call('lab:image-info', id, options),
+  imageInfoDetails: (id) => call('lab:image-info-details', id),
   onEvent: (callback) => {
     const listener = (_event, message) => callback(message);
     ipcRenderer.on('lab:event', listener);

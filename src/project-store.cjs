@@ -185,18 +185,30 @@ class ProjectStore {
       await atomic(file, text);
     }
   }
+  textFile(nodeId) {
+    const entry = this.result?.entries.find((e) => e.nodeId === nodeId && e.kind === 'text');
+    if (!entry?.prompt?.trim()) throw new Error('此文本节点没有可保存的正文。');
+    const index = this.result.entries.filter((e) => e.kind === 'text').indexOf(entry) + 1;
+    const hash = createHash('sha256').update(nodeId).digest('hex').slice(0, 8);
+    const label =
+      entry.name
+        .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+        .trim()
+        .slice(0, 60) || '未命名文本';
+    const name = '文本_' + String(index).padStart(4, '0') + '_' + label + '_' + hash + '.txt';
+    return { entry, name };
+  }
+  async textFileInfo(nodeId) {
+    if (!this.directory) return { saved: false };
+    const { entry, name } = this.textFile(nodeId),
+      file = inside(this.directory, name);
+    const stat = await exists(file);
+    if (!stat?.isFile() || stat.size > 8 * 1024 * 1024) return { saved: false };
+    return { saved: (await fs.readFile(file, 'utf8')) === entry.prompt, file, fileName: name };
+  }
   saveText(nodeId) {
     return this.serial(async () => {
-      const entry = this.result?.entries.find((e) => e.nodeId === nodeId && e.kind === 'text');
-      if (!entry?.prompt?.trim()) throw new Error('此文本节点没有可保存的正文。');
-      const index = this.result.entries.filter((e) => e.kind === 'text').indexOf(entry) + 1;
-      const hash = createHash('sha256').update(nodeId).digest('hex').slice(0, 8);
-      const label =
-        entry.name
-          .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
-          .trim()
-          .slice(0, 60) || '未命名文本';
-      const name = '文本_' + String(index).padStart(4, '0') + '_' + label + '_' + hash + '.txt';
+      const { entry, name } = this.textFile(nodeId);
       const file = inside(this.directory, name);
       let old;
       try {

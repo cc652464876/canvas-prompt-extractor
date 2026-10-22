@@ -52,6 +52,10 @@ app.whenReady().then(async () => {
       ui.webContents.send('lab:event', { type: 'project', payload: saved });
       return { ok: true, value: saved };
     });
+    ipcMain.handle('lab:text-file', async (_event, nodeId) => ({
+      ok: true,
+      value: await store.textFileInfo(nodeId)
+    }));
     ipcMain.handle('lab:info', () => ({
       ok: true,
       value: { outputDirectory: '测试数据', options: { mode: 'full' } }
@@ -136,6 +140,33 @@ app.whenReady().then(async () => {
     assert.equal(geometry.links, 1);
     assert.equal(geometry.label, '关联节点');
     check('Source text has a full-width reader and navigable consumer');
+    await run(`document.getElementById('reading-board').style.minHeight='1800px'`);
+    for (const width of [1440, 960]) {
+      ui.setSize(width, 960);
+      await wait(200);
+      for (const layout of ['side', 'stack', 'dual']) {
+        await click('#read-layouts [data-layout=' + layout + ']');
+        for (const offset of [250, 800]) {
+          await run(
+            `window.scrollTo(0, document.getElementById('reader-section').offsetTop + ${offset})`
+          );
+          await wait(50);
+          const toolbar = await run(
+            `(()=>{const bar=document.querySelector('.reader-toolbar'),r=bar.getBoundingClientRect(),b=document.getElementById('clear-readers'),p=b.getBoundingClientRect();return {top:r.top,bottom:r.bottom,background:getComputedStyle(bar).backgroundColor,pageBackground:getComputedStyle(document.body).backgroundColor,clearClickable:b.contains(document.elementFromPoint(p.left+p.width/2,p.top+p.height/2))};})()`
+          );
+          assert.ok(Math.abs(toolbar.top) < 1, JSON.stringify({ width, layout, toolbar }));
+          assert.ok(toolbar.bottom < 960);
+          assert.equal(toolbar.background, toolbar.pageBackground);
+          assert.equal(toolbar.clearClickable, true);
+        }
+      }
+    }
+    ui.setSize(1440, 960);
+    await run(`document.getElementById('reading-board').style.minHeight='';window.scrollTo(0,0)`);
+    await wait(200);
+    check(
+      'Reader toolbar stays visible and clear remains clickable across layouts and narrow windows'
+    );
     assert.equal(
       await run(`document.querySelector('.reading-card.focused .download-one').disabled`),
       false

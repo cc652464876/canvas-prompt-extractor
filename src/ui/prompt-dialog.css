@@ -1,0 +1,127 @@
+/* LibTV glyphs supplied by the user; original paths are kept in icons/. */
+.prompt-window-button {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 5px;
+  color: var(--muted);
+  flex: none;
+}
+.prompt-window-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: url('./icons/libtv-expand.svg') center / contain no-repeat;
+}
+.prompt-window-icon.is-contract {
+  mask-image: url('./icons/libtv-contract.svg');
+}
+.prompt-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 28px;
+}
+.prompt-heading > .work-source { flex: 1; min-width: 0; margin: 0; padding: 0; }
+.prompt-heading > .prompt-expand { margin-left: auto; }
+
+.ref-strip { --reference-size: 68px; }
+.ref-strip .ref-thumb {
+  flex: 0 0 var(--reference-size);
+  width: var(--reference-size);
+  height: calc(var(--reference-size) * 9 / 16);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ref-strip .ref-thumb:hover:not(:disabled) { background: transparent; }
+.ref-strip .ref-picture { height: 100%; }
+.ref-strip .references { padding-bottom: 0; }
+.ref-strip .ref-arrow { min-height: 0; height: calc(var(--reference-size) * 9 / 16); }
+
+#prompt-dialog {
+  width: min(1120px, calc(100vw - 40px));
+  height: min(780px, calc(100vh - 48px));
+  min-width: min(440px, calc(100vw - 40px));
+  min-height: min(280px, calc(100vh - 48px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  padding: 16px;
+  border-radius: 14px;
+  overflow: hidden;
+  resize: both;
+  box-shadow: var(--popup-shadow);
+}
+/* Hide the native grip artwork while keeping its resize hit area. */
+#prompt-dialog::-webkit-resizer {
+  background: transparent;
+  border: 0;
+}
+#prompt-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.prompt-dialog-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px;
+  align-items: center;
+  flex: none;
+  gap: 20px;
+}
+#prompt-dialog .prompt-dialog-slider {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+#prompt-dialog .prompt-dialog-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 0;
+  border-radius: 99px;
+  background: var(--line);
+}
+#prompt-dialog .prompt-dialog-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.prompt-dialog-references { flex: none; min-width: 0; padding: 0 28px; }
+#prompt-dialog .ref-strip {
+  --reference-size: inherit;
+  display: block;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+#prompt-dialog .ref-arrow { position: absolute; top: 0; left: -28px; width: 20px; }
+#prompt-dialog .ref-arrow:last-child { left: auto; right: -28px; }
+#prompt-dialog .prompt-dialog-content {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 4px 28px 16px;
+  scrollbar-gutter: stable;
+}
+#prompt-dialog .prompt-inner p { margin: 0; }
+
+/* A manual popover places previews above modal dialogs in the browser top layer. */
+#hover-preview { inset: auto; margin: 0; }
+#hover-preview::backdrop { background: transparent; }

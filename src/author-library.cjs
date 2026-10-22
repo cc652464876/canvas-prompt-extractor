@@ -251,5 +251,9 @@ class AuthorStore {
     const saved = await record.store.saveText(nodeId);
     return { ...this.summary(), savedText: record.work.title + ' / ' + saved.savedText };
   }
+  async textFileInfo(nodeId) {
+    const record = this.records.find((r) => r.result.entries.some((e) => e.nodeId === nodeId));
+    return record?.store ? record.store.textFileInfo(nodeId) : { saved: false };
+  }
 }
 module.exports = { safeFolder, namespaceResult, mergeResults, AuthorStore };

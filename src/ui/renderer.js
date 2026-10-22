@@ -12,6 +12,7 @@ import {
   boardAssets,
   downloadMetrics,
   filtered,
+  imageBrandQuery,
   countKinds,
   downloadState,
   pageSize,
@@ -35,11 +36,19 @@ import {
   initMediaDialog,
   bindScrollArrow,
   openMediaPreview,
-  closeMediaPreview
+  closeMediaPreview,
+  hideHoverPreview
 } from './interactions.js';
 import { readerTarget, referencingEntries } from './reader-targets.js';
 import { promptReferenceLabel, promptReferenceTokens } from './prompt-display.js';
+import { createImageInfoDialog, createReaderImageInfo } from './image-info.js';
+import { createPromptDialog, promptWindowButton } from './prompt-dialog.js';
 const $ = (id) => document.getElementById(id);
+const imageInfoDialog = createImageInfoDialog();
+const promptDialog = createPromptDialog({ getTypography: () => promptTypography.get() });
+window.addEventListener('image-info-updated', (event) => {
+  for (const record of readers) record.imageInfo?.update(event.detail);
+});
 let result = null,
   busy = false,
   visible = false,
@@ -323,7 +332,7 @@ function updateButtons() {
   $('visibility').disabled = browserResetting || localOpening;
   accountControls.setLocked(browserResetting || localOpening, loginBusy);
   $('browser-search').disabled = browserResetting || localOpening;
-  for (const button of document.querySelectorAll('[data-social-login]'))
+  for (const button of document.querySelectorAll('[data-social-login],[data-browser-login]'))
     button.disabled = browserResetting || localOpening;
   for (const c of $('export-types').querySelectorAll('input')) c.disabled = locked;
   $('split').disabled = locked;
@@ -380,19 +389,20 @@ function updateButtons() {
   syncAuthorViews();
   authorControls.render();
   for (const node of readerElements.values()) {
-    for (const tools of node.querySelectorAll('.media-tools')) {
-      const asset = assetMap.get(tools.dataset.assetId);
-      if (!asset) continue;
-      tools.querySelector('.state-tag').textContent = mediaState(asset);
-      tools.querySelector('button').hidden = asset.state !== 'done';
-    }
     const a = assetMap.get(node.dataset.currentAsset),
-      b = node.querySelector('.download-one');
+      b = node.querySelector('.download-one'),
+      record = readers.find((record) => record.key === node.dataset.key),
+      text = itemFor(record || {}),
+      isText = record?.scope === 'prompts' && text?.kind === 'text';
+    record?.imageInfo?.setAsset(a);
+    const locate = node.querySelector('.reader-locate'),
+      hasLocation = isText ? Boolean(record.textFileSaved) : a?.state === 'done';
+    if (locate) locate.hidden = !hasLocation;
+    node.querySelector('.detail-actions')?.classList.toggle('has-file-location', hasLocation);
     if (b) {
-      const text = itemFor(readers.find((record) => record.key === node.dataset.key) || {});
-      if (text?.kind === 'text') {
-        b.disabled = locked || !text.prompt?.trim();
-        b.textContent = '下载文本';
+      if (isText) {
+        b.disabled = locked || !text.prompt?.trim() || hasLocation;
+        b.textContent = hasLocation ? '已下载' : '下载文本';
         continue;
       }
       b.disabled = locked || !a || a.state === 'done' || mode() !== 'full';
@@ -400,10 +410,17 @@ function updateButtons() {
         a?.state === 'done' ? '已下载' : a?.state === 'downloading' ? '下载中' : '下载素材';
     }
   }
+  for (const player of document.querySelectorAll('video[data-asset-id],audio[data-asset-id]'))
+    preparePlayer(player, assetMap.get(player.dataset.assetId));
 }
 
 function sourceUrl(a) {
   return `labmedia://${a.state === 'done' ? 'local' : 'stream'}/${a.id}`;
+}
+function preparePlayer(player, asset) {
+  if (!asset || player.getAttribute('src') || (!onlinePreview() && asset.state !== 'done')) return;
+  player.preload = 'metadata';
+  player.src = sourceUrl(asset);
 }
 function mediaState(a) {
   if (result?.localProject && a?.error === '本地文件缺失或不完整') return '本地文件缺失或不完整';
@@ -427,11 +444,18 @@ function bytes(n) {
 }
 async function reveal(a) {
   if (!a) return;
-  const r = await window.lab.reveal(a.id);
-  if (!r.ok) status(r.error, 'attention');
+  const r =
+    a.kind === 'text' ? await window.lab.textFile(a.nodeId, true) : await window.lab.reveal(a.id);
+  if (!r.ok) {
+    if (a.kind === 'text') {
+      for (const record of readers) if (record.nodeId === a.nodeId) record.textFileSaved = false;
+      updateButtons();
+    }
+    status(r.error, 'attention');
+  }
 }
-function bindHover(container, image, a, context) {
-  bindSmallPreview(container, image, a, context);
+function bindHover(container, image, a, context, options) {
+  bindSmallPreview(container, image, a, context, options);
 }
 function thumbnailCover(a, item) {
   const cover = el('div', '', 'cover');
@@ -578,6 +602,7 @@ function openReader(s, item, nodeId, assetId) {
   focusRecord(record);
 }
 function enterPreviewReader(asset, context) {
+  promptDialog.close();
   if (asset.kind === 'text') {
     openReader('prompts', asset);
     return;
@@ -587,10 +612,13 @@ function enterPreviewReader(asset, context) {
   else openReader('assets', asset, context?.nodeId, asset.id);
 }
 function disposeReader(record) {
+  promptDialog.closeFor(record.key);
   record.dispose?.();
   record.dispose = null;
   record.showOutput = null;
   record.selectAsset = null;
+  record.imageInfo?.dispose();
+  record.imageInfo = null;
 }
 function removeReader(record) {
   disposeReader(record);
@@ -615,6 +643,7 @@ async function downloadOne(record) {
     updateButtons();
     try {
       const response = await window.lab.saveText(entry.nodeId);
+      if (response.ok) record.textFileSaved = true;
       status(
         response.ok ? '已保存文本：' + response.value.savedText : response.error,
         response.ok ? 'done' : 'error'
@@ -720,14 +749,24 @@ function updateReaderLayout() {
 function refThumb(a, index, nodeId) {
   const b = el('button', '', 'ref-thumb');
   b.type = 'button';
-  b.title = a.name + ' · ' + mediaState(a) + '；点击已保存素材可定位文件';
+  b.title = a.name + ' · ' + mediaState(a) + '；左键预览，右键定位文件';
+  b.setAttribute('aria-label', a.name + '；左键预览，右键定位文件');
   const pic = el('span', '', 'ref-picture');
   pic.append(icon(a.kind));
   const image = attachThumbnail(pic, a, { full: onlinePreview() });
-  bindHover(b, image, a, { nodeId });
-  b.append(pic, el('span', a.name, 'ref-name'));
+  bindHover(b, image, a, { nodeId }, { contextMenu: false });
+  b.append(pic);
   if (index != null) b.append(el('span', String(index), 'ref-number'));
-  b.addEventListener('click', () => reveal(a));
+  b.addEventListener('click', () => {
+    hideHoverPreview();
+    openMediaPreview(a, { nodeId });
+  });
+  b.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    hideHoverPreview();
+    void reveal(a);
+  });
   return b;
 }
 function referenceStrip(item) {
@@ -802,6 +841,7 @@ function mediaOutput(a, context) {
     stage = el('div', '', 'media-stage');
   box.append(stage);
   if (a.kind === 'image') {
+    box.classList.add('image-output');
     if (a.state !== 'done' && !onlinePreview())
       stage.append(
         el(
@@ -826,7 +866,18 @@ function mediaOutput(a, context) {
         image.remove();
         stage.append(el('div', '预览暂不可用，下载后可查看。', 'media-placeholder'));
       };
-      image.addEventListener('click', () => reveal(a));
+      image.tabIndex = 0;
+      image.setAttribute('role', 'button');
+      image.setAttribute('aria-label', '查看图片信息：' + a.name);
+      image.setAttribute('aria-haspopup', 'dialog');
+      image.setAttribute('aria-controls', 'image-info-dialog');
+      image.addEventListener('click', () => imageInfoDialog.show(a));
+      image.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          imageInfoDialog.show(a);
+        }
+      });
       stage.append(image);
       bindMagnifier(stage, image, a, context);
     }
@@ -838,7 +889,6 @@ function mediaOutput(a, context) {
     });
     if (a.kind === 'audio') {
       stage.classList.add('audio-stage');
-      stage.append(icon('audio'));
     }
     const player = el(a.kind === 'video' ? 'video' : 'audio');
     player.controls = true;
@@ -846,22 +896,6 @@ function mediaOutput(a, context) {
     stage.dataset.previewState = 'idle';
     player.dataset.assetId = a.id;
     if (a.kind === 'video') bindVideoPoster(player, a, { full: onlinePreview() });
-    const play = action(a.kind === 'video' ? '播放视频' : '播放音频', () => {
-      if (!onlinePreview() && a.state !== 'done') {
-        status(
-          result?.localProject ? '此素材未下载或本地文件缺失。' : '请切换全能模式加载在线媒体。',
-          'attention'
-        );
-        return;
-      }
-      stage.dataset.previewState = 'loading';
-      player.src = sourceUrl(a);
-      player.preload = 'metadata';
-      player.load();
-      play.remove();
-      player.play().catch(() => {});
-    });
-    play.className = 'load-media';
     player.addEventListener('play', () => {
       for (const other of document.querySelectorAll('video,audio'))
         if (other !== player) other.pause();
@@ -870,7 +904,7 @@ function mediaOutput(a, context) {
       player.addEventListener(event, () => {
         stage.dataset.previewState = 'loading';
       });
-    for (const event of ['canplay', 'playing', 'loadeddata'])
+    for (const event of ['loadedmetadata', 'canplay', 'playing', 'loadeddata'])
       player.addEventListener(event, () => {
         stage.dataset.previewState = 'ready';
       });
@@ -878,14 +912,9 @@ function mediaOutput(a, context) {
       stage.dataset.previewState = 'failed';
       status('播放失败，可下载后查看，或检查登录和素材地址有效期。', 'attention');
     });
-    stage.append(player, play);
+    stage.append(player);
+    preparePlayer(player, a);
   }
-  const tools = el('div', '', 'media-tools');
-  tools.dataset.assetId = a.id;
-  const locate = action('定位文件', () => reveal(a));
-  locate.hidden = a.state !== 'done';
-  tools.append(el('span', mediaState(a), 'state-tag'), locate);
-  stage.append(tools);
   return box;
 }
 function resizeHandle(card, shell, record) {
@@ -1074,7 +1103,10 @@ function detail(item, record) {
     text = el('div', '', 'text-col');
   content.append(visual, text);
   d.append(content);
-  if (item.workTitle) text.prepend(el('p', '所属作品：' + item.workTitle, 'work-source'));
+  const workTitle = item.workTitle || result?.metadata.title,
+    promptHeading = el('div', '', 'prompt-heading');
+  if (workTitle) promptHeading.append(el('p', '所属作品：' + workTitle, 'work-source'));
+  text.prepend(promptHeading);
   const head = el('div', '', 'detail-heading'),
     title = el('div', '', 'detail-title');
   title.append(
@@ -1108,8 +1140,17 @@ function detail(item, record) {
   remove.className = 'quiet remove-reader';
   const download = action('下载素材', () => downloadOne(record), { quiet: true });
   download.className = 'quiet download-one';
+  const locate = action(
+    '定位文件',
+    () => reveal(isText ? item : assetMap.get(d.dataset.currentAsset)),
+    {
+      quiet: true
+    }
+  );
+  locate.classList.add('locate-file', 'reader-locate');
+  locate.hidden = true;
   copy.disabled = isAsset || !item.prompt?.trim();
-  controls.append(download, remove, copy, collapse);
+  controls.append(download, locate, remove, copy, collapse);
   head.append(title, controls);
   head.addEventListener('click', (e) => {
     if (!e.target.closest('button')) toggle();
@@ -1151,19 +1192,25 @@ function detail(item, record) {
         el('div', '没有当前生成结果，明确关联的参考素材和文本仍保留。', 'media-placeholder')
       );
     const current = outputs[record.output];
+    const hasLocation = isText ? Boolean(record.textFileSaved) : current?.state === 'done';
+    locate.hidden = !hasLocation;
+    controls.classList.toggle('has-file-location', hasLocation);
     d.dataset.currentAsset = current?.id || '';
     const button = d.querySelector('.download-one');
     button.disabled = isText
-      ? !item.prompt?.trim() || busy || saving || downloads?.active
+      ? !item.prompt?.trim() || busy || saving || downloads?.active || hasLocation
       : !current || current.state === 'done' || busy || downloads?.active;
     button.textContent = isText
-      ? '下载文本'
+      ? hasLocation
+        ? '已下载'
+        : '下载文本'
       : current?.state === 'done'
         ? '已下载'
         : current?.state === 'downloading'
           ? '下载中'
           : '下载素材';
     if (counter) counter.textContent = `${record.output + 1} / ${outputs.length} 个结果`;
+    record.imageInfo?.setAsset(current);
   }
   if (outputs.length > 1) {
     const nav = el('div', '', 'carousel-nav');
@@ -1190,6 +1237,16 @@ function detail(item, record) {
     }
   };
   showOutput();
+  if (isText) {
+    void window.lab
+      .textFile(item.nodeId)
+      .then((response) => {
+        if (!d.isConnected || !response.ok) return;
+        record.textFileSaved = response.value.saved;
+        updateButtons();
+      })
+      .catch(() => {});
+  }
   if (!isAsset) {
     const refs = referenceStrip(item);
     if (refs) visual.append(refs);
@@ -1219,7 +1276,7 @@ function detail(item, record) {
           (item.associatedTexts || []).length
             ? '该素材未读到直接提示词，下方保留关联文本。'
             : '该素材暂无自身提示词。',
-          'hint'
+          'hint reader-prompt-placeholder'
         )
       );
     for (const ref of item.associatedTexts || [])
@@ -1258,12 +1315,22 @@ function detail(item, record) {
             isText
               ? '文本正文读取失败，节点与关联关系已保留。'
               : '当前节点无直接文本，下方保留关联文本。',
-            'hint'
+            'hint reader-prompt-placeholder'
           )
     );
     if (item.textState === 'partial')
       inner.append(el('p', '部分文本格式未解析，请核对平台原文。', 'hint'));
     for (const ref of item.referenceTexts) inner.append(linkedTextBlock(ref, !item.prompt.trim()));
+  }
+  if (outputs.some((asset) => asset.kind === 'image')) {
+    record.imageInfo = createReaderImageInfo((visible) => {
+      const placeholder = inner.querySelector('.reader-prompt-placeholder');
+      if (placeholder) placeholder.hidden = visible;
+    });
+    if (!isAsset && (item.prompt?.trim() || item.referenceTexts?.length))
+      record.imageInfo.element.classList.add('has-canvas-prompt');
+    inner.append(record.imageInfo.element);
+    record.imageInfo.setAsset(outputs[record.output]);
   }
   const citations = citingStrip(item, record);
   if (citations) text.append(citations);
@@ -1275,6 +1342,21 @@ function detail(item, record) {
     if (scroll.isConnected) scroll.scrollTop = restoreScroll;
   });
   d.append(resizeHandle(d, shell, record));
+  const expandPrompt = promptWindowButton();
+  expandPrompt.classList.add('prompt-expand');
+  expandPrompt.setAttribute('aria-haspopup', 'dialog');
+  expandPrompt.setAttribute('aria-controls', 'prompt-dialog');
+  expandPrompt.addEventListener('click', () =>
+    promptDialog.show({
+      owner: record.key,
+      anchor: expandPrompt,
+      inner,
+      scroll,
+      strip: visual.querySelector('.ref-strip'),
+      name: item.name
+    })
+  );
+  promptHeading.append(expandPrompt);
   if (record.collapsed) d.classList.add('is-collapsed');
   d.addEventListener('pointerdown', () => {
     focusedReader = record.key;
@@ -1320,7 +1402,7 @@ function renderBoard() {
   prepareVideoThumbnails(result?.assets || [], { full: onlinePreview() });
   filename();
   updateButtons();
-  $('hover-preview').hidden = true;
+  hideHoverPreview();
   renderFilters();
   pressed($('tab-prompts'), scope === 'prompts');
   pressed($('tab-assets'), scope === 'assets');
@@ -1523,6 +1605,7 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     updateButtons();
   }
   if (type === 'reset') {
+    imageInfoDialog.close();
     clearVideoThumbnails();
     $('retry').hidden = true;
     closeMediaPreview();
@@ -1546,6 +1629,7 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     $('pagination').replaceChildren();
   }
   if (type === 'result') {
+    imageInfoDialog.close();
     const preservedDownloads = payload.authorProfile && downloads?.authorWorkIds ? downloads : null;
     if (payload.localProject) {
       $('search').value = '';
@@ -1584,6 +1668,13 @@ window.lab.onEvent(({ type, payload, taskId }) => {
   }
   if (type === 'project') applyProject(payload);
   if (type === 'downloads') showDownloads(payload);
+  if (type === 'image-brands' && result) {
+    for (const { assetId, brand } of payload) {
+      const asset = assetMap.get(assetId);
+      if (asset) asset.imageBrand = brand;
+    }
+    if (scope === 'assets' && imageBrandQuery($('search').value)) renderBoard();
+  }
   if (type === 'assets' && result) {
     // Keep the objects used by open readers and media callbacks alive.
     result.assets = payload.map((asset) => Object.assign(assetMap.get(asset.id) || {}, asset));
@@ -1677,13 +1768,18 @@ $('social-profiles-enabled').addEventListener('change', async (event) => {
     checkbox.disabled = false;
   }
 });
-for (const button of document.querySelectorAll('[data-social-login]')) {
+for (const button of document.querySelectorAll('[data-social-login],[data-browser-login]')) {
   button.addEventListener('click', async () => {
-    const notice = $('social-profile-status');
+    const browserLogin = button.dataset.browserLogin,
+      notice = $(browserLogin ? 'browser-access-status' : 'social-profile-status');
     try {
-      const response = await window.lab.socialLogin(button.dataset.socialLogin);
+      const response = browserLogin
+        ? await window.lab.openBrowser(browserLogin)
+        : await window.lab.socialLogin(button.dataset.socialLogin);
       if (!response.ok) throw new Error(response.error);
-      notice.textContent = '请在打开的平台页面登录；完成后重新点击“开始读取网页”更新公开用户资料。';
+      notice.textContent = browserLogin
+        ? '已打开 Midjourney，可在内置浏览器中登录。'
+        : '请在打开的平台页面登录；完成后重新点击“开始读取网页”更新公开用户资料。';
     } catch (error) {
       notice.textContent = error.message;
     }
@@ -1857,6 +1953,7 @@ function setBrowserResetting(value) {
   for (const control of $('appearance-dialog').querySelectorAll('button,input'))
     if (control.id !== 'appearance-close') control.disabled = browserResetting;
   if (browserResetting) {
+    promptDialog.close();
     clearVideoThumbnails();
     closeMediaPreview();
     stopIn($('reading-board'));
@@ -1949,6 +2046,6 @@ function previewOutput(item, context) {
   body.append(el('pre', item.prompt || '文本正文读取失败，节点与关联关系已保留。'));
   return body;
 }
-initMediaDialog(previewOutput, stopIn, enterPreviewReader);
+initMediaDialog(previewOutput, stopIn, enterPreviewReader, reveal);
 renderBoard();
 updateReaderLayout();

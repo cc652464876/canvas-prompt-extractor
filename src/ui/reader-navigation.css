@@ -11,7 +11,7 @@
 .asset-prompt-choices { display: flex; flex-wrap: wrap; gap: 6px; }
 .asset-prompt-choices button { font-size: 12px; }
 #reading-board[data-layout=side] .text-col { flex-direction: column; gap: 8px; }
-#reading-board:not([data-layout=side]) .citing-strip { grid-row: 5; }
+#reading-board:not([data-layout=side]) .citing-strip { grid-row: 7; }
 .reading-card.is-collapsed .citing-strip { display: none; }
 
 .linked-text { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }

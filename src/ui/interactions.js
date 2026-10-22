@@ -1,6 +1,12 @@
 export let openMediaPreview = () => {},
   closeMediaPreview = () => {};
 let activePreviewAnchor = null;
+export function hideHoverPreview() {
+  const preview = document.getElementById('hover-preview');
+  if (preview.matches(':popover-open')) preview.hidePopover();
+  preview.hidden = true;
+  activePreviewAnchor = null;
+}
 export function imageRect(image) {
   const r = image.getBoundingClientRect(),
     ratio = image.naturalWidth / image.naturalHeight;
@@ -28,12 +34,15 @@ export function conditionalTitle(node) {
   node.addEventListener('mouseenter', update);
   node.addEventListener('focus', update);
 }
-export function bindSmallPreview(container, image, asset, context) {
+export function bindSmallPreview(container, image, asset, context, { contextMenu = true } = {}) {
   const preview = document.getElementById('hover-preview');
+  preview.popover = 'manual';
   let timer,
     inside = false;
   const show = () => {
-    if (!inside || !image?.naturalWidth) return;
+    if (!inside || !container.isConnected || !image?.naturalWidth) return;
+    const activeModal = document.activeElement?.closest('dialog:modal');
+    if (activeModal && !activeModal.contains(container)) return;
     const shown = imageRect(image),
       w = Math.min(460, innerWidth - 32),
       h = Math.min(300, innerHeight - 80),
@@ -41,7 +50,7 @@ export function bindSmallPreview(container, image, asset, context) {
       pw = Math.min(w - 16, h * ratio),
       ph = pw / ratio;
     if (pw <= shown.width * 1.12 || ph <= shown.height * 1.12) {
-      preview.hidden = true;
+      hideHoverPreview();
       return;
     }
     const anchor = container.getBoundingClientRect(),
@@ -59,6 +68,8 @@ export function bindSmallPreview(container, image, asset, context) {
     preview.style.left = x + 'px';
     preview.style.top = y + 'px';
     preview.hidden = false;
+    if (preview.matches(':popover-open')) preview.hidePopover();
+    preview.showPopover();
     activePreviewAnchor = container;
   };
   container.addEventListener('mouseenter', () => {
@@ -74,14 +85,15 @@ export function bindSmallPreview(container, image, asset, context) {
   container.addEventListener('mouseleave', () => {
     inside = false;
     clearTimeout(timer);
-    if (activePreviewAnchor === container) preview.hidden = true;
+    if (activePreviewAnchor === container) hideHoverPreview();
   });
-  container.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    preview.hidden = true;
-    openMediaPreview(asset, context);
-  });
+  if (contextMenu)
+    container.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideHoverPreview();
+      openMediaPreview(asset, context);
+    });
   if (container.classList.contains('cover')) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -90,7 +102,7 @@ export function bindSmallPreview(container, image, asset, context) {
     button.setAttribute('aria-label', '预览 ' + asset.name);
     button.addEventListener('click', (e) => {
       e.stopPropagation();
-      preview.hidden = true;
+      hideHoverPreview();
       openMediaPreview(asset, context);
     });
     container.append(button);
@@ -155,10 +167,23 @@ export function bindMagnifier(stage, image, asset, context) {
     true
   );
 }
-export function initMediaDialog(createMedia, stop, enterReader) {
+export function initMediaDialog(createMedia, stop, enterReader, reveal) {
   const dialog = document.getElementById('media-dialog'),
     body = document.getElementById('media-dialog-body');
   let current = null;
+  const local = document.createElement('span'),
+    locate = document.createElement('button'),
+    actions = document.querySelector('#media-dialog .preview-actions');
+  local.className = 'preview-file-state';
+  local.textContent = '已下载';
+  locate.type = 'button';
+  locate.className = 'quiet locate-file preview-locate';
+  locate.textContent = '定位文件';
+  local.hidden = locate.hidden = true;
+  locate.addEventListener('click', () => {
+    if (current) void reveal(current.asset);
+  });
+  actions.prepend(local, locate);
   closeMediaPreview = () => {
     current = null;
     if (dialog.open) dialog.close();
@@ -169,13 +194,22 @@ export function initMediaDialog(createMedia, stop, enterReader) {
   };
   openMediaPreview = (asset, context) => {
     current = { asset, context };
-    document.getElementById('hover-preview').hidden = true;
+    local.hidden = locate.hidden = asset.state !== 'done';
+    if (asset.kind === 'text') {
+      void window.lab
+        .textFile(asset.nodeId)
+        .then((response) => {
+          if (current?.asset === asset && dialog.open && response.ok)
+            local.hidden = locate.hidden = !response.value.saved;
+        })
+        .catch(() => {});
+    }
+    hideHoverPreview();
     for (const p of document.querySelectorAll('video,audio')) p.pause();
     stop(body);
     body.replaceChildren(createMedia(asset, context));
     document.getElementById('media-dialog-title').textContent = asset.name;
     dialog.showModal();
-    if (asset.kind !== 'image') body.querySelector('.load-media')?.click();
   };
   document.getElementById('media-dialog-reader').addEventListener('click', () => {
     if (!current) return;
@@ -200,7 +234,7 @@ export function initMediaDialog(createMedia, stop, enterReader) {
     window.addEventListener(
       event,
       () => {
-        document.getElementById('hover-preview').hidden = true;
+        hideHoverPreview();
       },
       true
     );

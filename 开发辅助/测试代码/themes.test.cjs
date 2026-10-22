@@ -73,7 +73,8 @@ test('All palettes provide every consumed token and keep readable text contrast'
     'prompt-ref-size',
     'prompt-ref-gap',
     'prompt-ref-radius',
-    'prompt-chip-radius'
+    'prompt-chip-radius',
+    'reference-size'
   ]);
   const used = [...new Set([...css.matchAll(/var\(--([a-z-]+)/g)].map((m) => m[1]))].filter(
     (key) => !layout.has(key)

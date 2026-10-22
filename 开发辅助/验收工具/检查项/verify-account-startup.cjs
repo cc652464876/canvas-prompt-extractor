@@ -58,6 +58,41 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
       true
     );
     check('Platform shortcuts moved into settings above social logins and Enter-only search');
+    const shortcutSizes = await run(
+      `Array.from(document.querySelectorAll('#platform-shortcuts button,.social-login-actions button')).map(b=>{const r=b.getBoundingClientRect();return {text:b.textContent,width:r.width,height:r.height}})`
+    );
+    assert.equal(shortcutSizes.length, 8);
+    assert.deepEqual(
+      shortcutSizes.slice(4).map((b) => b.text),
+      ['Midjourney登录', '小红书登录', '抖音登录', 'B站登录']
+    );
+    for (const button of shortcutSizes) {
+      assert.ok(Math.abs(button.width - shortcutSizes[0].width) < 1);
+      assert.equal(button.height, shortcutSizes[0].height);
+    }
+    ui.show();
+    ui.focus();
+    await wait(200);
+    await fs.writeFile(
+      path.join(out, 'eight-shortcuts.png'),
+      (await ui.webContents.capturePage()).toPNG()
+    );
+    await run(`document.querySelector('[data-browser-login]').click()`);
+    await until(() =>
+      [...independentBrowser.windows.keys()].some(
+        (w) => w.webContents.getURL() === 'https://www.midjourney.com/'
+      )
+    );
+    const mjWindow = [...independentBrowser.windows.keys()].find(
+      (w) => w.webContents.getURL() === 'https://www.midjourney.com/'
+    );
+    assert.equal(mjWindow.webContents.session, session.fromPartition('persist:browser'));
+    mjWindow.destroy();
+    ui.show();
+    ui.focus();
+    check(
+      'Eight equal-size shortcuts include Midjourney login before Xiaohongshu, sharing the built-in job browser session'
+    );
     await run(
       "document.getElementById('browser-search').value='example.org';document.getElementById('browser-search').dispatchEvent(new Event('input',{bubbles:true}))"
     );

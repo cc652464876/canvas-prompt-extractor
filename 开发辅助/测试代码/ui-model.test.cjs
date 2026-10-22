@@ -28,6 +28,37 @@ test('Browse category and search are independent of export scope', async () => {
   assert.equal(filtered(r, 'prompts', 'all', '一只狗').length, 1);
   assert.deepEqual(r.options.kinds, ['video']);
 });
+test('MJ aliases filter recognized images, independent of download state and text mentions', async () => {
+  const { filtered } = await model();
+  const result = {
+    entries: [{ kind: 'image', name: 'MJ 提示词', prompt: 'Midjourney 风格' }],
+    assets: [
+      { id: 'recognized', kind: 'image', name: '古寺', imageBrand: 'Midjourney', state: 'done' },
+      { id: 'known', kind: 'image', name: '人物', imageBrand: 'Midjourney', state: 'pending' },
+      { id: 'mention', kind: 'image', name: 'MJ', prompt: 'Midjourney', imageBrand: 'GPT Image' },
+      { id: 'unknown', kind: 'image', name: 'Midjourney' },
+      { id: 'video', kind: 'video', name: 'MJ', imageBrand: 'Midjourney' }
+    ]
+  };
+  for (const query of ['mj', 'MJ', '  mJ  ', 'Midjourney', 'MIDJOURNEY', 'midJourney'])
+    assert.deepEqual(
+      filtered(result, 'assets', 'all', query).map((a) => a.id),
+      ['recognized', 'known']
+    );
+  assert.equal(filtered(result, 'assets', new Set(['video']), 'mj').length, 0);
+  assert.equal(filtered(result, 'assets', 'all', '').length, 5);
+  assert.deepEqual(
+    filtered(result, 'assets', 'all', '古寺').map((a) => a.id),
+    ['recognized']
+  );
+  assert.equal(filtered(result, 'prompts', 'all', 'mj').length, 1);
+  result.assets[0].imageBrand = '';
+  assert.deepEqual(
+    filtered(result, 'assets', 'all', 'mj').map((a) => a.id),
+    ['known']
+  );
+});
+
 test('Completed selection shows redownload; a partial or failed selection is not called complete', async () => {
   const { downloadState } = await model();
   const assets = [

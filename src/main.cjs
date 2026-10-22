@@ -56,6 +56,33 @@ const { bindDevToolsShortcut, installDevToolsMenu } = require('./devtools-shortc
 app.on('browser-window-created', (_event, window) => bindDevToolsShortcut(window.webContents));
 const { createMediaFetcher } = require('./services/media-fetcher.cjs');
 const { createMediaProtocol } = require('./services/media-protocol.cjs');
+const { ImageInfoService } = require('./services/image-info.cjs');
+const imageInfo = new ImageInfoService({
+  onError: (error) => console.error('图片信息缓存：', error.message)
+});
+function scanImageInfo(result, project, assets = result.assets) {
+  void imageInfo
+    .scan(assets, project)
+    .then((rows) =>
+      publishImageBrands(
+        result,
+        rows.filter((r) => r.status === 'fulfilled').map((r) => r.value)
+      )
+    )
+    .catch((error) => console.error(error.message));
+}
+function publishImageBrands(result, infos) {
+  if (result !== currentResult) return;
+  const assets = new Map(result.assets.map((a) => [a.id, a])),
+    brands = [];
+  for (const info of infos) {
+    const asset = assets.get(info.assetId);
+    if (!asset || asset.kind !== 'image') continue;
+    asset.imageBrand = (info.brand || '').replace(/（.*?）/g, '').trim();
+    brands.push({ assetId: asset.id, brand: asset.imageBrand });
+  }
+  if (brands.length) send('image-brands', brands);
+}
 const extractionScope = new TaskScope();
 protocol.registerSchemesAsPrivileged([
   {
@@ -572,6 +599,7 @@ authorService = createAuthorService({
     currentLocalProject = Boolean(result.localProject);
     store = project;
     send('result', result);
+    scanImageInfo(result, project);
     send('project', {
       ...store.summary(),
       root: outputDirectory,
@@ -703,6 +731,7 @@ async function openLocalProject(input = '') {
     store.options = exportOptions;
     send('result', { ...currentResult, localProject: true });
     send('project', { ...store.summary(), manifestPath: loaded.manifestPath });
+    scanImageInfo(currentResult, store);
     const missing = currentResult.assets.filter((a) => a.error === '本地文件缺失或不完整').length;
     status(
       `本地项目已打开：${currentResult.entries.length} 条提示词与文本，${currentResult.assets.filter((a) => a.state === 'done').length} 个本地素材。${missing ? ' ' + missing + ' 个素材文件缺失或不完整。' : ''}`,
@@ -850,6 +879,7 @@ async function ensureProject() {
     await candidate.create(currentResult, exportOptions, false);
     store = candidate;
     send('assets', currentResult.assets);
+    scanImageInfo(currentResult, candidate);
   } else await store.checkpoint();
   return store;
 }
@@ -907,8 +937,10 @@ function createQueue() {
         }
       }
     },
-    onSettled: async () => {
+    onSettled: async (asset) => {
       await project.checkpoint();
+      if (asset?.kind === 'image' && asset.state === 'done')
+        scanImageInfo(result, project, [asset]);
       if (authorWorkIds) authorService.refresh({ assetsOnly: true });
       else if (currentResult === result) {
         send('assets', result.assets);
@@ -1090,14 +1122,24 @@ if (ownsInstance)
         if (saveTask) saveTask.cancelled = true;
         return true;
       });
+      handle('lab:text-file', async (nodeId, reveal = false) => {
+        if (!currentResult?.entries.some((e) => e.nodeId === nodeId && e.kind === 'text'))
+          throw new Error('未找到当前文本节点。');
+        const info = await store.textFileInfo(nodeId);
+        if (reveal === true) {
+          if (!info.saved) throw new Error('当前文本尚未保存，或本地正文已变化，请重新下载文本。');
+          shell.showItemInFolder(info.file);
+        }
+        return { saved: info.saved, fileName: info.fileName || '' };
+      });
       handle('lab:copy', (options) => {
         const result = editedResult(options || {});
         clipboard.writeText(markdown(result));
         return true;
       });
-      handle('lab:copy-text', (text) => {
+      handle('lab:copy-text', async (text) => {
         if (typeof text !== 'string' || text.length > 2000000) throw new Error('复制内容无效。');
-        clipboard.writeText(text);
+        await clipboard.writeText(text);
         return true;
       });
       handle('lab:cache-thumbnail', async (id, data) => {
@@ -1132,6 +1174,25 @@ if (ownsInstance)
           () => true,
           () => false
         );
+      });
+      handle('lab:image-info', async (id, options) => {
+        const result = currentResult,
+          asset = result?.assets.find((a) => a.id === id);
+        if (!asset || asset.kind !== 'image') throw new Error('未找到当前图片。');
+        if (asset.state !== 'done') return { status: 'needs-download', assetId: id };
+        const file = store.assetPath(asset);
+        const info = await imageInfo.read(asset, file, {
+          force: options?.force === true,
+          priority: true
+        });
+        publishImageBrands(result, [info]);
+        return info;
+      });
+      handle('lab:image-info-details', async (id) => {
+        const asset = currentResult?.assets.find((a) => a.id === id);
+        if (!asset || asset.kind !== 'image' || asset.state !== 'done')
+          throw new Error('请先下载当前图片。');
+        return imageInfo.details(asset, store.assetPath(asset));
       });
       handle('lab:directory', async () => {
         if (task || saveTask || queue?.active) throw new Error('请先结束当前任务再更换保存位置。');
@@ -1316,6 +1377,17 @@ if (ownsInstance)
         app.exit(0);
         return;
       }
+      if (process.argv.includes('--verify-image-info')) {
+        await require('../开发辅助/验收工具/检查项/verify-image-info.cjs')({
+          ui,
+          root: ROOT,
+          independentBrowser
+        });
+        await require('../开发辅助/验收工具/检查项/verify-reader-media.cjs')({ ui, root: ROOT });
+        await imageInfo.close();
+        app.exit(0);
+        return;
+      }
       if (verifyV12) {
         await require('../开发辅助/验收工具/检查项/verify-v12.cjs')({
           ui,
@@ -1451,6 +1523,7 @@ if (ownsInstance)
     })
     .catch(async (error) => {
       console.error(error.stack || error.message);
+      await imageInfo.close().catch((cleanupError) => console.error(cleanupError.message));
       await workCache.close().catch((cleanupError) => console.error(cleanupError.message));
       app.exit(1);
     });
@@ -1470,6 +1543,7 @@ app.on('before-quit', (event) => {
   if (saveTask) saveTask.cancelled = true;
   if (queue?.active) queue.cancel();
   shutdownPending = Promise.allSettled([
+    imageInfo.close(),
     workCache.close(),
     visibilityWriteTail,
     socialPreferenceWriteTail

@@ -12,6 +12,7 @@
     "start": "node scripts/start.cjs",
     "verify:ui": "node scripts/start.cjs --verify-v12",
     "verify:transfer": "node \"开发辅助/验收工具/verify-transfer.cjs\"",
+    "verify:image-info": "node scripts/start.cjs --verify-image-info",
     "verify:live": "node scripts/start.cjs --verify-live",
     "verify:readers": "node \"开发辅助/验收工具/verify-reader-navigation.cjs\"",
     "verify:accounts": "node \"开发辅助/验收工具/verify-account-state.cjs\"",

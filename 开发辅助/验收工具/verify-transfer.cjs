@@ -46,6 +46,7 @@ async function verify() {
       'scripts',
       'node_modules',
       'runtime',
+      'tools',
       'package.json',
       'pnpm-lock.yaml',
       'pnpm-workspace.yaml',
@@ -76,6 +77,11 @@ async function verify() {
         "const p=require('node:path');for(const n of ['esbuild','electron']){const f=require.resolve(n);if(!f.startsWith(process.cwd()+p.sep))throw Error('Dependency outside copy: '+f);}if(!require('electron').startsWith(process.cwd()+p.sep))throw Error('Electron outside copy');console.log('Local runtimes resolved');"
       ],
       { cwd: copiedRoot, env }
+    );
+    await run(
+      copiedNode,
+      ['--test', path.join(copiedRoot, '开发辅助', '测试代码', 'image-info.test.cjs')],
+      { cwd: temporary, env }
     );
     // Start from a different directory and without Node.js/pnpm in PATH.
     const powershell = path.join(

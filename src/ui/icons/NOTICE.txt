@@ -1,0 +1,2 @@
+libtv-expand.svg and libtv-contract.svg: LibTV interface glyphs supplied by the user.
+The original viewBox and path data are preserved without redrawing.
