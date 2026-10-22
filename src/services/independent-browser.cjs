@@ -61,12 +61,18 @@ class IndependentBrowser {
       {
         homeUrl: siteForUrl(url)?.homeUrl || 'https://www.google.com/',
         manual: true,
+        onTabCreated: (tab, window) => this.configureContents(window, tab.contents, partition),
         beforeNavigate: (address) => !this.handoff(address, partition)
       }
     );
     this.windows.set(win, { partition, url });
     win.once('closed', () => this.windows.delete(win));
-    const wc = win.webContents;
+    // Lightweight service fixtures do not materialize WebContentsView tabs.
+    if (!win.browserToolbar) this.configureContents(win, win.webContents, partition);
+    this.onOpen();
+    return win;
+  }
+  configureContents(win, wc, partition) {
     wc.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     const guard = (event, address) => {
       if (!isBrowserAddress(address) || this.handoff(address, partition)) event.preventDefault();
@@ -77,11 +83,16 @@ class IndependentBrowser {
       if (!isBrowserAddress(address) || this.handoff(address, partition)) return { action: 'deny' };
       return {
         action: 'allow',
-        createWindow: (options) => this.create(address, partition, options).webContents
+        createWindow: (options) =>
+          win.browserToolbar
+            ? win.browserToolbar.addTab({
+                url: address,
+                incoming: options.webContents,
+                webPreferences: options.webPreferences
+              }).contents
+            : this.create(address, partition, options).webContents
       };
     });
-    this.onOpen();
-    return win;
   }
   open(input, { partition } = {}) {
     if (typeof input !== 'string' || !input.trim() || input.length > 8192)

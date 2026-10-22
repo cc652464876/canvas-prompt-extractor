@@ -20,12 +20,17 @@ class TaskScope {
     if (this.current !== token || token.cancelled || token.controller.signal.aborted)
       throw Object.assign(new Error('任务已取消。'), { code: 'READ_CANCELLED' });
     if (token.navigation?.error) throw token.navigation.error;
+    if (token.contents?.isDestroyed?.())
+      throw Object.assign(new Error('作品标签页已关闭，请重新读取。'), {
+        code: 'READ_PAGE_CLOSED'
+      });
   }
   cancel() {
     if (this.current) {
       this.current.cancelled = true;
       this.current.controller.abort();
-      this.current.window?.webContents.stop();
+      const wc = this.current.contents || this.current.window?.webContents;
+      if (wc && !wc.isDestroyed?.()) wc.stop();
     }
   }
   finish(token) {

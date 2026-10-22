@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('lab', {
   openFolder: () => call('lab:open-folder'),
   info: () => call('lab:info'),
   openLocalProject: (input) => call('lab:open-local-project', input),
+  openCanvas: () => call('lab:open-canvas'),
   reveal: (id) => call('lab:reveal', id),
   download: (options) => call('lab:download', options),
   downloadControl: (action) => call('lab:download-control', action),

@@ -119,13 +119,14 @@ class ExtractionFeedback {
     window,
     {
       theme = 'light',
+      webContents = window.webContents,
       frameTimeoutMs = FRAME_TIMEOUT_MS,
       cleanupTimeoutMs = CLEANUP_TIMEOUT_MS,
       onDiagnostic = () => {}
     } = {}
   ) {
     this.window = window;
-    this.wc = window.webContents;
+    this.wc = webContents;
     this.id = randomUUID();
     this.theme = resolveTheme(theme, nativeTheme.shouldUseDarkColors);
     this.previousMuted = this.wc.isAudioMuted();
@@ -196,7 +197,7 @@ class ExtractionFeedback {
       window.on(event, listener);
       this.parentBindings.push([event, listener]);
     };
-    for (const event of ['move', 'resize', 'show', 'restore'])
+    for (const event of ['move', 'resize', 'show', 'restore', 'browser-tab-activated'])
       bind(event, () => {
         this.syncVisibility();
         setImmediate(() => this.syncVisibility());
@@ -246,6 +247,7 @@ class ExtractionFeedback {
     if (
       this.ready &&
       !this.closed &&
+      this.window.webContents === this.wc &&
       !isTransparentRead(this.window) &&
       this.window.isVisible() &&
       !this.window.isMinimized()

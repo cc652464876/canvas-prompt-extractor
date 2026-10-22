@@ -110,7 +110,7 @@ function readCanvas() {
   };
 }
 
-function inspectWork() {
+function inspectWork(_platform, readPublished = null) {
   if (location.protocol === 'chrome-error:') return { pageError: true, resolvedUrl: location.href };
   const visible = (el) => Boolean(el && el.getClientRects().length);
   const body = document.body?.innerText || '';
@@ -159,7 +159,11 @@ function inspectWork() {
     }
   }
   const button = Array.from(document.querySelectorAll('button, [role="button"]')).find(
-    (b) => visible(b) && /^查看(制作|创作)过程$/.test((b.innerText || b.textContent).trim())
+    (b) =>
+      visible(b) &&
+      !b.disabled &&
+      b.getAttribute('aria-disabled') !== 'true' &&
+      /^查看(制作|创作)过程$/.test((b.innerText || b.textContent).trim())
   );
   // The detail player uses a blob/HLS URL. Its project prop holds the original
   // downloadable finalOutput; never collect recommended works from the page.
@@ -252,6 +256,16 @@ function inspectWork() {
   return {
     title,
     author,
+    ...(readPublished
+      ? readPublished({
+          workId,
+          title,
+          heading,
+          detail: Boolean(workId),
+          process: Boolean(button),
+          login: /欢迎登录|请输入手机号/.test(body)
+        })
+      : {}),
     ...(workId && Object.keys(workInfo).length ? { workInfo } : {}),
     ...(fullVideo ? { fullVideo } : {}),
     resolvedUrl: location.href,
@@ -284,7 +298,11 @@ function openCanvas(allowClick = true, allowDismiss = true) {
   if ([...document.querySelectorAll('.react-flow, iframe[src*="/ai-canvas/"]')].some(visible))
     return { alreadyOpen: true };
   const button = buttons.find(
-    (b) => visible(b) && /^查看(制作|创作)过程$/.test((b.innerText || b.textContent).trim())
+    (b) =>
+      visible(b) &&
+      !b.disabled &&
+      b.getAttribute('aria-disabled') !== 'true' &&
+      /^查看(制作|创作)过程$/.test((b.innerText || b.textContent).trim())
   );
   if (button) {
     if (allowClick) button.scrollIntoView({ block: 'center', behavior: 'instant' });

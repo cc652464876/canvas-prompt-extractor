@@ -22,6 +22,10 @@ function leftWork(url, requested) {
 module.exports = {
   ...metadata,
   page: require('./reader.cjs'),
+  profile: require('./profile.cjs'),
+  isWorkUrl: (url) =>
+    metadata.workHosts.includes(url.hostname) &&
+    /^\/(?:detail|canvas|ai-canvas)\/[^/]+\/?$/.test(url.pathname),
   inspectAccount: require('./account.cjs').inspectAccount,
   ...require('./parser.cjs'),
   ...require('./assets.cjs'),

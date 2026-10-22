@@ -48,7 +48,7 @@ function filterResult(result, kinds) {
         ...e.references.flatMap((r) => r.assetIds || [])
       ])
     );
-  const { nodes, edges, nodeSummaries, ...rest } = result;
+  const { nodes, edges, nodeSummaries, canvasSnapshot, ...rest } = result;
   return {
     ...rest,
     selection: [...allowed],

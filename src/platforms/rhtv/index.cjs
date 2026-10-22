@@ -3,6 +3,13 @@ const metadata = require('./metadata.cjs');
 module.exports = {
   ...metadata,
   page: require('./reader.cjs'),
+  isWorkUrl: (url) =>
+    metadata.workHosts.includes(url.hostname) &&
+    /^\/(?:project\/canvas|projects\/canvas\/camp)\/[^/]+\/?$/.test(url.pathname),
+  validateWorkUrl: (value) => {
+    if (!/^\/(?:project\/canvas|projects\/canvas\/camp)\/[^/]+\/?$/.test(new URL(value).pathname))
+      throw new Error('请粘贴 RHTV 的具体作品详情或画布链接。');
+  },
   inspectAccount: require('./account.cjs').inspectAccount,
   ...require('./parser.cjs'),
   ...require('./assets.cjs'),

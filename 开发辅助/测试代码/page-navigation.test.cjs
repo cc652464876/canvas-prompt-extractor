@@ -8,6 +8,36 @@ function fixture(load) {
   const wc = Object.assign(new EventEmitter(), { mainFrame: { url } });
   return { webContents: wc, loadURL: () => load(wc) };
 }
+test('Pinned navigation and cancellation do not follow the active tab', async () => {
+  const { TaskScope } = require('../../src/services/task-scope.cjs');
+  const active = fixture(() => {
+    throw new Error('Must not load the active page');
+  });
+  let loaded = '',
+    stops = 0;
+  const wc = new EventEmitter();
+  Object.assign(wc, {
+    mainFrame: { url },
+    loadURL: async (value) => {
+      loaded = value;
+    },
+    stop: () => {
+      stops++;
+    }
+  });
+  await loadWork(active, url, undefined, { webContents: wc });
+  assert.equal(loaded, url);
+  const scope = new TaskScope(),
+    token = scope.begin('liblib', url);
+  token.window = active;
+  token.contents = wc;
+  active.webContents.stop = () => {
+    throw new Error('Must not stop the active page');
+  };
+  scope.cancel();
+  assert.equal(stops, 1);
+  assert.equal(token.controller.signal.aborted, true);
+});
 test('Main network failure wins over an error document DOM-ready and a late loadURL rejection', async () => {
   let rejectLoad;
   const win = fixture((wc) => {

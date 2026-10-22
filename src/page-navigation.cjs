@@ -33,8 +33,8 @@ function watchPageFailures(wc, onFailure = () => {}) {
   };
   return state;
 }
-async function loadWork(window, url, signal, { timeoutMs = 45000 } = {}) {
-  const wc = window.webContents;
+async function loadWork(window, url, signal, { timeoutMs = 45000, webContents } = {}) {
+  const wc = webContents || window.webContents;
   let ready, fail, http;
   try {
     await boundedRead(
@@ -56,7 +56,7 @@ async function loadWork(window, url, signal, { timeoutMs = 45000 } = {}) {
           wc.once('dom-ready', ready);
           wc.on('did-fail-load', fail);
           wc.on('did-navigate', http);
-          window
+          (webContents || window)
             .loadURL(url)
             .then(resolve, (error) =>
               reject(pageLoadError(error.errno, error.code || error.message))

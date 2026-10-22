@@ -150,6 +150,14 @@ function buildAssets(
     byKey.set(id, a);
     return a;
   }
+  const full = snapshot.fullVideo;
+  if (full)
+    add(
+      { id: 'full-video:' + full.workId, type: 'video', data: { name: full.name } },
+      { ...full, resourceId: 'full-video:' + full.workId },
+      0,
+      'full-video'
+    );
   adapter.collectAssets(snapshot, { add, safeUrl, previewUrls, assetKey, LABELS }, platform);
   return assets;
 }

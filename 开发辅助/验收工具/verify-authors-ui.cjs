@@ -52,7 +52,9 @@ if (!process.versions.electron) {
       win.webContents.on('console-message', (e) => {
         if (e.level === 'error' || e.level === 3) errors.push(e.message);
       });
-      let current, project;
+      let current,
+        project,
+        publications = 0;
       const send = (type, payload) => win.webContents.send('lab:event', { type, payload });
       const works = Array.from({ length: 10 }, (_, i) => ({
         templateUuid: (i + 1).toString(16).padStart(32, '0'),
@@ -80,7 +82,7 @@ if (!process.versions.electron) {
                 nodeId: 'node',
                 name: '场景示例',
                 kind: 'image_text',
-                prompt: '固定提示词',
+                prompt: '固定提示词\n'.repeat(120),
                 group: '',
                 model: '示例模型',
                 position: {},
@@ -105,6 +107,7 @@ if (!process.versions.electron) {
           };
         },
         publish: (value, store) => {
+          publications++;
           current = value;
           project = store;
           send('result', value);
@@ -147,13 +150,37 @@ if (!process.versions.electron) {
       try {
         await win.loadFile(path.join(root, 'src/ui/index.html'));
         assert.equal(await run(`document.getElementById('start').textContent`), '开始读取网页');
+        for (const address of [
+          'https://jimeng.jianying.com/s/hBHP6B5pXik/',
+          'https://jimeng.jianying.com/ai-tool/personal/MS4wLjABAAAATESTAUTHOR',
+          'https://app.tapnow.plus/creator/profile/test'
+        ]) {
+          await run(
+            `document.getElementById('url').value=${JSON.stringify(address)};document.getElementById('url').dispatchEvent(new Event('input'))`
+          );
+          assert.equal(
+            await run(`document.getElementById('jimeng-profile-note').hidden`),
+            !address.includes('jimeng')
+          );
+        }
+        check(
+          'Jimeng short and canonical profile URLs show the login/list explanation without sending a request'
+        );
         await service.open('https://liblib.tv/profile?uuid=' + 'a'.repeat(32));
         await until(() => run(`document.querySelectorAll('.work-card').length===10`));
+        assert.equal(
+          await run(`document.querySelector('#author-works .card-subheading').textContent`),
+          '画布状态待确认'
+        );
         await run(
           `document.getElementById('columns').value=8;document.getElementById('columns').dispatchEvent(new Event('input'));document.getElementById('author-select-all').click()`
         );
         await run("document.getElementById('author-read').click()");
         await until(() => current?.assets.length === 10 && !service.reading);
+        assert.equal(
+          await run(`document.querySelector('#author-works .card-subheading').textContent`),
+          '画布已公开'
+        );
         await wait(180);
         const geometry = await run(
           `(()=>{const w=[...document.querySelectorAll('.work-card')].map(n=>n.getBoundingClientRect()),a=document.querySelector('#entries .content-card').getBoundingClientRect(),s=document.querySelector('.search-field').getBoundingClientRect(),t=document.querySelector('.board-visibility').getBoundingClientRect(),buttons=[...document.querySelectorAll('.board-visibility button')].map(n=>n.getBoundingClientRect().width);return{first:w.filter(r=>r.top===w[0].top).length,second:w.filter(r=>r.top===w[8].top).length,assetsStart:a.top,worksEnd:w[9].bottom,workWidth:w[0].width,assetWidth:a.width,workHeight:w[0].height,assetHeight:a.height,searchWidth:s.width,toggleWidth:t.width,buttons}})()`
@@ -200,14 +227,130 @@ if (!process.versions.electron) {
           else assert.equal(size.text, 'true');
         }
         check('Density changes resize work and asset cards together, including text index mode');
-        send('downloads', {
+        const downloadSnapshot = {
           active: true,
           paused: false,
           files: current.assets.slice(0, 2),
           speeds: {},
           failed: 0,
           authorWorkIds: current.authorProfile.loadedIds.slice(0, 2)
-        });
+        };
+        const unavailableSnapshot = {
+          ...downloadSnapshot,
+          failed: 1,
+          files: downloadSnapshot.files.map((asset, index) => ({
+            ...asset,
+            state: index === 0 ? 'unavailable' : 'downloading',
+            error: index === 0 ? '平台尚未提供可下载地址' : ''
+          }))
+        };
+        send('downloads', unavailableSnapshot);
+        await until(() => run(`!document.getElementById('failures').hidden`));
+        assert.equal(await run(`document.getElementById('retry').hidden`), true);
+        const failedSnapshot = {
+          ...unavailableSnapshot,
+          paused: true,
+          files: unavailableSnapshot.files.map((asset, index) => ({
+            ...asset,
+            state: index === 0 ? 'failed' : asset.state,
+            error: index === 0 ? '下载连接中断' : asset.error
+          }))
+        };
+        send('downloads', failedSnapshot);
+        await until(() => run(`!document.getElementById('retry').hidden`));
+        for (let refresh = 0; refresh < 3; refresh++) {
+          service.refresh();
+          await run(`new Promise(resolve => requestAnimationFrame(resolve))`);
+          assert.equal(await run(`document.getElementById('retry').hidden`), false);
+          assert.equal(await run(`document.getElementById('retry').disabled`), true);
+          assert.equal(await run(`document.getElementById('failures').hidden`), false);
+          assert.equal(await run(`document.getElementById('download-attention').hidden`), false);
+          assert.match(
+            await run(`document.getElementById('failed-files').textContent`),
+            /下载连接中断/
+          );
+        }
+        check('作者列表反复刷新时保留失败提示、重试按钮与暂停提示；仅不可用素材不显示重试');
+        for (const width of [1440, 1000, 800, 680]) {
+          win.setContentSize(width, 1100);
+          await wait(100);
+          const layout = await run(`(() => {
+            const rect = id => document.getElementById(id).getBoundingClientRect();
+            const rows = rect('download-types'), audio = rect('progress-audio'),
+              note = rect('download-context'), download = rect('download'), retry = rect('retry');
+            return {
+              noteBelow: note.top >= audio.bottom,
+              noteInProgressColumn: note.left === rows.left && note.right <= rows.right + 1,
+              buttonsInActionColumn: download.left > rows.right && retry.left === download.left,
+              buttonsFit: retry.right <= innerWidth,
+              actionAtTop: download.top < audio.top
+            };
+          })()`);
+          assert.ok(Object.values(layout).every(Boolean), JSON.stringify({ width, layout }));
+        }
+        win.setContentSize(1440, 1100);
+        await run(`document.getElementById('download-strip').scrollIntoView({block:'center'})`);
+        await wait(150);
+        await fs.writeFile(
+          path.join(out, 'author-download-feedback-ui.png'),
+          (await win.webContents.capturePage()).toPNG()
+        );
+        check('任务说明在音频进度条下方，下载与重试按钮在右侧固定列，四种窗口宽度无挤占');
+        await run(`
+          document.getElementById('columns').value = 5;
+          document.getElementById('columns').dispatchEvent(new Event('input'));
+          const cards = document.querySelectorAll('#entries .card-heading');
+          cards[0].click();
+          cards[1].click();
+        `);
+        await wait(100);
+        await run(`
+          window.downloadReaders = [...document.querySelectorAll('.reading-card')];
+          window.downloadImage = downloadReaders[0].querySelector('.media-stage img');
+          window.downloadScroll = downloadReaders[0].querySelector('.prompt-text');
+          downloadScroll.scrollTop = 96;
+          downloadReaders[1].querySelector('.collapse-reader').click();
+          downloadReaders[0].dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));
+        `);
+        assert.equal(await run(`downloadScroll.scrollTop`), 96);
+        const publishedBeforeDownloads = publications;
+        for (const [state, active] of [
+          ['downloading', true],
+          ['done', true],
+          ['pending', true],
+          ['done', false]
+        ]) {
+          current.assets[0].state = state;
+          send('downloads', { ...downloadSnapshot, active, files: current.assets.slice(0, 2) });
+          service.refresh({ assetsOnly: true });
+          await wait(180);
+          const readingState = await run(`({
+            sameCards: [...document.querySelectorAll('.reading-card')].every((card, i) => card === downloadReaders[i]) && document.querySelectorAll('.reading-card').length === 2,
+            sameImage: downloadImage === document.querySelector('.reading-card .media-stage img'),
+            scroll: downloadScroll.scrollTop,
+            collapsed: downloadReaders[1].classList.contains('is-collapsed'),
+            focused: downloadReaders[0].classList.contains('focused'),
+            saved: downloadReaders[0].querySelector('.state-tag').textContent,
+            locateHidden: downloadReaders[0].querySelector('.media-tools button').hidden
+          })`);
+          assert.equal(readingState.sameCards, true);
+          assert.equal(readingState.sameImage, true);
+          assert.equal(readingState.scroll, 96);
+          assert.equal(readingState.collapsed, true);
+          assert.equal(readingState.focused, true);
+          assert.equal(readingState.locateHidden, state !== 'done');
+          assert.equal(
+            readingState.saved,
+            { downloading: '下载中', done: '已保存到本地', pending: '未保存到本地' }[state]
+          );
+          assert.equal(publications, publishedBeforeDownloads);
+        }
+        await run(`document.getElementById('clear-readers').click()`);
+        assert.equal(await run(`document.querySelectorAll('.reading-card').length`), 0);
+        check(
+          '下载、完成与重新下载只更新素材状态，保留阅读卡片、媒体元素、正文滚动、焦点及收起状态；手动清空仍有效'
+        );
+        send('downloads', downloadSnapshot);
         await run(`document.getElementById('author-clear').click()`);
         await wait(100);
         assert.equal(current.assets.length, 0);
@@ -240,6 +383,71 @@ if (!process.versions.electron) {
           await wait(100);
           assert.equal(await run(`document.documentElement.scrollWidth<=innerWidth`), true);
         }
+        const { publishedWork } = require('../../src/published-work.cjs');
+        const { namespaceResult, mergeResults } = require('../../src/author-library.cjs');
+        const videoWork = {
+          id: 'published-only',
+          title: '未公开画布的作品',
+          url: 'https://app.tapnow.plus/home/taptv/3/published-only',
+          canvasAccess: 'not-public',
+          note: '画布未公开，仅可下载作品视频',
+          state: 'ready',
+          error: ''
+        };
+        const videoProfile = {
+          platform: 'tapnow',
+          uuid: 'author',
+          author: '示例作者',
+          url: 'https://app.tapnow.plus/creator/profile/author',
+          works: [videoWork],
+          selectedIds: [videoWork.id]
+        };
+        const videoResult = namespaceResult(
+          publishedWork({
+            platform: 'tapnow',
+            inputUrl: videoWork.url,
+            title: videoWork.title,
+            author: videoProfile.author,
+            fullVideo: {
+              workId: videoWork.id,
+              name: videoWork.title,
+              url: 'https://cdn.example.com/work.mp4'
+            }
+          }),
+          videoWork
+        );
+        send('author', videoProfile);
+        send(
+          'result',
+          mergeResults(videoProfile, new Map([[videoWork.id, videoResult]]), [videoWork.id])
+        );
+        send('status', {
+          message: '已读取 1 部作品；画布未公开，仅可下载作品视频。',
+          phase: 'done'
+        });
+        win.setContentSize(1440, 1100);
+        await run(
+          `document.getElementById('columns').value=5;document.getElementById('columns').dispatchEvent(new Event('input'));document.getElementById('tab-assets').click()`
+        );
+        await wait(150);
+        assert.match(
+          await run(`document.querySelector('.work-card .card-subheading').textContent`),
+          /画布未公开/
+        );
+        assert.equal(await run(`document.querySelectorAll('#entries .content-card').length`), 0);
+        assert.equal(await run(`document.getElementById('open-canvas').disabled`), true);
+        assert.equal(await run(`document.getElementById('save-prompts').disabled`), true);
+        assert.equal(await run(`document.getElementById('download').disabled`), false);
+        assert.equal(
+          await run(`document.querySelector('[data-filter="video"] .counter').textContent`),
+          '0'
+        );
+        check('未公开画布保留作品卡片与说明，隐藏画布素材，禁用画布及提示词按钮，成片仍可下载');
+        await run(`document.getElementById('author-section').scrollIntoView({block:'center'})`);
+        await fs.writeFile(
+          path.join(out, 'author-video-only-ui.png'),
+          (await win.webContents.capturePage()).toPNG()
+        );
         assert.deepEqual(errors, []);
         assert.ok(project);
         await fs.writeFile(

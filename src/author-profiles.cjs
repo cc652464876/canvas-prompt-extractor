@@ -1,6 +1,9 @@
 'use strict';
 const LABELS = {
   liblib: 'LibTV',
+  jimeng: '即梦AI',
+  rhtv: 'RHTV',
+  tapnow: 'TapNow',
   xiaohongshu: '小红书',
   douyin: '抖音',
   bilibili: 'B站',

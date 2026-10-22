@@ -3,6 +3,8 @@ const { verificationPath } = require('../app-paths.cjs');
 const fs = require('node:fs/promises'),
   path = require('node:path');
 const { normalize } = require('../normalize.cjs');
+const { publishedWork } = require('../published-work.cjs');
+const { inspectPublished } = require('../platforms/published-page.cjs');
 const { ProjectStore } = require('../project-store.cjs');
 const { boundedRead } = require('../read-deadline.cjs');
 const { loadWork, watchPageFailures, pageLoadError } = require('../page-navigation.cjs');
@@ -41,7 +43,7 @@ function createExtractionService({
     });
   }
   async function scanFrames(window, token) {
-    const frames = window.webContents.mainFrame.framesInSubtree;
+    const frames = token.contents.mainFrame.framesInSubtree;
     const adapter = getAdapter(token.platform);
     const allowed = frames.filter((frame) => matchesFrame(token.platform, frame.url));
     const values = await Promise.allSettled(
@@ -127,6 +129,13 @@ function createExtractionService({
       ...(reuseMetadata?.workInfo ? { workInfo: { ...reuseMetadata.workInfo } } : {}),
       ...(reuseMetadata?.fullVideo ? { fullVideo: reuseMetadata.fullVideo } : {})
     };
+    if (options.workHint?.url === url) {
+      const work = options.workHint;
+      metadata.workId = work.id;
+      metadata.title = work.title || metadata.title;
+      if (work.fullVideo) metadata.fullVideo = work.fullVideo;
+      if (work.canvasId) metadata.canvasId = work.canvasId;
+    }
     try {
       await extractionFeedback?.dispose();
       window = getPlatformWindow(platform, Boolean(options.visible) || needsVisibleLoad, true, url);
@@ -136,7 +145,20 @@ function createExtractionService({
         if (transparentRead) beginTransparentRead(window);
       }
       token.window = window;
-      token.navigation = watchPageFailures(window.webContents, (record) => {
+      // Pin the task to its own page. The native window's webContents getter
+      // follows the active tab and must never redirect a running extraction.
+      token.contents = window.webContents;
+      reuseCurrent =
+        reuseCurrent &&
+        reuseWorkPage({
+          requestedUrl: url,
+          platform,
+          attempt: lastAttemptWork,
+          windowUrl: token.contents.getURL(),
+          windowPlatform: platform,
+          windowAvailable: true
+        });
+      token.navigation = watchPageFailures(token.contents, (record) => {
         try {
           const parsed = new URL(record.url);
           record.url = parsed.origin + parsed.pathname;
@@ -159,9 +181,7 @@ function createExtractionService({
         try {
           reuseCurrent = await boundedRead(
             () =>
-              window.webContents.mainFrame.executeJavaScript(
-                '(' + reusableDocument.toString() + ')()'
-              ),
+              token.contents.mainFrame.executeJavaScript('(' + reusableDocument.toString() + ')()'),
             { timeoutMs: 1500, signal: token.controller.signal }
           );
         } catch {
@@ -170,8 +190,9 @@ function createExtractionService({
         }
         needsVisibleLoad = !hiddenRendering && adapter.requiresVisibleLoad && !reuseCurrent;
       }
-      if (!window.webContents.getURL()) await window.loadURL('about:blank');
+      if (!token.contents.getURL()) await token.contents.loadURL('about:blank');
       extractionFeedback = new ExtractionFeedback(window, {
+        webContents: token.contents,
         theme: options.theme || getTheme(),
         onDiagnostic: (record) => {
           // Local diagnostics omit query strings and credentials; logging must not
@@ -206,11 +227,11 @@ function createExtractionService({
       );
       if (needsVisibleLoad && !options.visible && !transparentRead && !presentWindow)
         status(`${adapter.name} 需要先显示窗口加载画布；提取完成后将自动隐藏。`);
-      if (!reuseCurrent || !window.webContents.getURL()) {
+      if (!reuseCurrent || !token.contents.getURL()) {
         lastAttemptWork = { platform, inputUrl: url, resolvedUrl: '' };
         updateState({ lastAttemptWork });
-        await loadWork(window, url, token.controller.signal);
-        lastAttemptWork.resolvedUrl = window.webContents.getURL();
+        await loadWork(window, url, token.controller.signal, { webContents: token.contents });
+        lastAttemptWork.resolvedUrl = token.contents.getURL();
       }
       ensureTask(token);
       let previousSignature = '',
@@ -222,13 +243,21 @@ function createExtractionService({
         opened = false,
         dismissedHints = 0,
         openAttempts = 0,
-        lastOpenAt = 0;
+        lastOpenAt = 0,
+        unpublishedSince = 0,
+        unpublished = false;
       while (Date.now() < deadline) {
         ensureTask(token);
         try {
           const work = await evaluateFrame(
-            window.webContents.mainFrame,
-            '(' + adapter.page.inspectWork.toString() + ')(' + JSON.stringify(platform) + ')',
+            token.contents.mainFrame,
+            '(' +
+              adapter.page.inspectWork.toString() +
+              ')(' +
+              JSON.stringify(platform) +
+              ',' +
+              inspectPublished.toString() +
+              ')',
             token
           );
           if (work.pageError) throw pageLoadError(undefined, '浏览器错误页面');
@@ -244,6 +273,20 @@ function createExtractionService({
           metadata.resolvedUrl = work.resolvedUrl;
           if (lastAttemptWork?.inputUrl === url) lastAttemptWork.resolvedUrl = work.resolvedUrl;
           latest = await scanFrames(window, token);
+          if (
+            !latest &&
+            work.detailReady &&
+            !work.canOpenCanvas &&
+            !work.loginVisible &&
+            !work.readonly &&
+            !work.loading
+          ) {
+            unpublishedSince ||= Date.now();
+            if (Date.now() - unpublishedSince >= 3500) {
+              unpublished = true;
+              break;
+            }
+          } else unpublishedSince = 0;
           if (latest) {
             void extractionFeedback.set(
               '已进入画布，正在读取并确认数据…',
@@ -269,7 +312,7 @@ function createExtractionService({
             // Close only its normal dismiss action, at most twice; enforced login remains manual.
             const allowClick = openAttempts < 3 && (!opened || Date.now() - lastOpenAt >= 8000);
             const outcome = await evaluateFrame(
-              window.webContents.mainFrame,
+              token.contents.mainFrame,
               '(' +
                 adapter.page.openCanvas.toString() +
                 ')(' +
@@ -319,12 +362,12 @@ function createExtractionService({
         });
       }
       ensureTask(token);
-      if (!latest || stable < 2) {
+      if (!unpublished && (!latest || stable < 2)) {
         if (live) {
           try {
             const detail = await boundedRead(
               () =>
-                window.webContents.mainFrame.executeJavaScript(
+                token.contents.mainFrame.executeJavaScript(
                   '({url:location.href,text:document.body.innerText.slice(0,6000),buttons:[...document.querySelectorAll("button,[role=button]")].filter(b=>b.getClientRects().length).map(b=>({text:b.innerText,aria:b.getAttribute("aria-label")}))})'
                 ),
               { timeoutMs: 1000, signal: token.controller.signal }
@@ -335,7 +378,7 @@ function createExtractionService({
             );
           } catch {}
           try {
-            const capture = await boundedRead(() => window.webContents.capturePage(), {
+            const capture = await boundedRead(() => token.contents.capturePage(), {
               timeoutMs: 1000,
               signal: token.controller.signal
             });
@@ -348,10 +391,13 @@ function createExtractionService({
             : '尚未读到画布。请点击“显示平台”检查页面，关闭普通弹窗或完成登录，再点击“开始读取网页”。'
         );
       }
-      let extracted = normalize(
-        metadata.fullVideo ? { ...latest, fullVideo: metadata.fullVideo } : latest,
-        metadata
-      );
+      let extracted = unpublished
+        ? publishedWork(metadata)
+        : normalize(
+            metadata.fullVideo ? { ...latest, fullVideo: metadata.fullVideo } : latest,
+            metadata
+          );
+      if (!unpublished) extracted.metadata.canvasAccess = 'public';
       if (enrichResult) extracted = await enrichResult(extracted, token.controller.signal);
       if (needsVisibleLoad && !options.visible && !transparentRead && !presentWindow) window.hide();
       ensureTask(token);
@@ -362,7 +408,7 @@ function createExtractionService({
         error = Object.assign(new Error('任务已取消。'), { code: 'READ_CANCELLED' });
       // Stop pending navigations before releasing the task. Late loads must not
       // hold frame execution or compete with the next read.
-      if (window && !window.isDestroyed()) window.webContents.stop();
+      if (token.contents && !token.contents.isDestroyed()) token.contents.stop();
       status(error.message, token.cancelled ? 'cancelled' : 'error');
       throw error;
     } finally {

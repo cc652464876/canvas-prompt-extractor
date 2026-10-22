@@ -109,7 +109,10 @@ test('Invalid paths, missing manifests, damaged JSON, unsupported schema and mal
   const { dir, manifest } = await fixture(t);
   await assert.rejects(loadLocalProject('relative'), /完整路径/);
   await assert.rejects(loadLocalProject(path.join(dir, '不存在')), /不存在/);
-  await assert.rejects(loadLocalProject(dir), /未找到/);
+  assert.equal((await loadLocalProject(dir)).collection, true);
+  const empty = path.join(dir, '空目录');
+  await fs.mkdir(empty);
+  await assert.rejects(loadLocalProject(empty), /未找到/);
   await fs.writeFile(path.join(dir, 'other.json'), '{}');
   await assert.rejects(loadLocalProject(path.join(dir, 'other.json')), /请选择/);
   const original = JSON.parse(await fs.readFile(manifest, 'utf8'));

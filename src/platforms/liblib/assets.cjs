@@ -13,14 +13,6 @@ function libtvPreview(url, kind) {
   return u.href;
 }
 function collectAssets(snapshot, { add, safeUrl, previewUrls, assetKey, LABELS }, platform) {
-  const full = snapshot.fullVideo;
-  if (full && safeUrl(full.url))
-    add(
-      { id: 'full-video:' + full.workId, type: 'video', data: { name: full.name } },
-      { ...full, resourceId: 'full-video:' + full.workId },
-      0,
-      'full-video'
-    );
   const byId = new Map((snapshot.nodes || []).map((n) => [n.id, n]));
   const list = (value) => (Array.isArray(value) ? value : value ? [value] : []);
   for (const node of snapshot.nodes || []) {

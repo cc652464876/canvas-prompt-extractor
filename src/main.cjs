@@ -21,6 +21,7 @@ const { markdown, filterResult } = require('./export/markdown.cjs');
 const { ProjectStore } = require('./project-store.cjs');
 const { readOutputDirectory, saveOutputDirectory } = require('./output-preference.cjs');
 const { loadLocalProject, isCurrentProjectPath } = require('./local-project.cjs');
+const { CanvasBrowserWindow } = require('./canvas-browser.cjs');
 const { PROMPT_TYPES, promptKinds } = require('./prompt-types.cjs');
 const { IndependentBrowser } = require('./services/independent-browser.cjs');
 const { AccountManager } = require('./account-manager.cjs');
@@ -41,7 +42,8 @@ const {
   isTransparentRead
 } = require('./platform-presentation.cjs');
 const { TaskScope } = require('./services/task-scope.cjs');
-const { profileAddress } = require('./platforms/liblib/profile.cjs');
+const { profileAddress } = require('./platforms/profiles.cjs');
+const { createProfilePageReader } = require('./services/profile-page.cjs');
 const { createAuthorService } = require('./services/author.cjs');
 const { WorkWindows, presentWindow } = require('./work-windows.cjs');
 const { SessionWorkCache } = require('./session-work-cache.cjs');
@@ -133,6 +135,7 @@ let store,
 let browserResetting = false;
 let localProjectOpening = false,
   currentLocalProject = false;
+let canvasBrowser;
 let browserGeneration = 0,
   browserPreviewAbort = new AbortController();
 const thumbnailWrites = new Set();
@@ -192,7 +195,8 @@ const independentBrowser = new IndependentBrowser({
 });
 const workWindows = new WorkWindows({
   createWindow: createPlatformWindow,
-  getVisible: () => platformVisible
+  getHomeUrl: (platform) => homeUrls()[platform],
+  getVisible: () => platformVisible && platformWindow === workWindows.window
 });
 function syncPresentation() {
   if (!managedPresentation) return;
@@ -200,11 +204,7 @@ function syncPresentation() {
   workWindows.sync();
   for (const { id } of listPlatforms()) {
     const window = accounts.existing(id);
-    if (window)
-      presentWindow(
-        window,
-        !workWindows.authorMode && window === platformWindow && platformVisible
-      );
+    if (window) presentWindow(window, window === platformWindow && platformVisible);
   }
   for (const [child, parent] of platformChildren) {
     if (parent && !parent.isDestroyed())
@@ -218,7 +218,32 @@ function syncPresentation() {
 }
 async function setPlatformVisible(value) {
   platformVisible = Boolean(value);
+  if (
+    platformVisible &&
+    !task &&
+    !authorService.listing &&
+    authorService.active &&
+    (!workWindows.owns(platformWindow) || !workWindows.hasSelectedPages)
+  ) {
+    const profile = authorService.snapshot();
+    if (!profile.localProject) {
+      const win = getPlatformWindow(profile.platform, false, true);
+      if (!win.webContents.getURL().startsWith(profile.url))
+        void win.loadURL(profile.url).catch((error) => status(error.message, 'error'));
+    }
+  }
   syncPresentation();
+  // An explicit reveal must restore a minimized window and raise it above the UI.
+  if (
+    platformVisible &&
+    platformWindow &&
+    !platformWindow.isDestroyed() &&
+    !isTransparentRead(platformWindow)
+  ) {
+    if (platformWindow.isMinimized()) platformWindow.restore();
+    platformWindow.show();
+    platformWindow.focus();
+  }
   visibilityWriteTail = visibilityWriteTail
     .catch(() => {})
     .then(() => saveVisibility(visibilityPath, platformVisible));
@@ -260,6 +285,7 @@ app.on('second-instance', () => {
   }
 });
 function send(type, payload) {
+  if (['result', 'project', 'assets', 'author'].includes(type)) canvasBrowser?.scheduleRefresh();
   if (ui && !ui.isDestroyed())
     ui.webContents.send('lab:event', {
       type,
@@ -281,20 +307,19 @@ function secureContents(wc, platform) {
   const permittedUrl = (value) =>
     platformPermittedUrl(platform, value) || isManualBrowserNavigation(wc, value);
   const trackChild = (child) => {
-    secureContents(child.webContents, platform);
     platformChildren.set(child, BrowserWindow.fromWebContents(wc));
     child.once('closed', () => platformChildren.delete(child));
     if (isTransparentRead(BrowserWindow.fromWebContents(wc))) {
       beginTransparentRead(child);
       if (task) (task.transparentChildren ||= new Set()).add(child);
     }
-    if (task && task.window?.webContents.session === wc.session) {
+    if (task && task.contents?.session === wc.session) {
       task.childAudio.push({ wc: child.webContents, muted: child.webContents.isAudioMuted() });
       child.webContents.setAudioMuted(true);
     }
   };
   wc.on('will-navigate', (event, url) => {
-    if (task?.window?.webContents === wc && leftRequestedWork(url, task.url)) {
+    if (task?.contents === wc && leftRequestedWork(url, task.url)) {
       event.preventDefault();
       status('提取期间已阻止离开当前作品，请等待完成或在主界面停止读取。', 'attention');
       return;
@@ -305,13 +330,13 @@ function secureContents(wc, platform) {
     }
   });
   wc.setWindowOpenHandler(({ url }) => {
-    if (task?.window?.webContents === wc && permittedUrl(url)) {
+    if (task?.contents === wc && permittedUrl(url)) {
       const action = popupAction(url, task.url);
       if (action === 'canvas') {
         const token = task;
         if (!token.pendingNavigation) {
           status('画布跳转中，正在当前窗口打开画布…');
-          token.pendingNavigation = token.window
+          token.pendingNavigation = token.contents
             .loadURL(url)
             .catch(() => {})
             .finally(() => {
@@ -356,6 +381,7 @@ function secureContents(wc, platform) {
 function platformBrowserSettings(platform) {
   return {
     homeUrl: homeUrls()[platform],
+    onTabCreated: (tab) => secureContents(tab.contents, tab.platform || platform),
     blocked: (window) => (task?.window === window ? '正在读取画布，请先停止读取再操作导航。' : '')
   };
 }
@@ -378,7 +404,7 @@ function getPlatformWindow(platform, visible, deferShow = false) {
   );
   return platformWindow;
 }
-function createPlatformWindow(platform) {
+function createPlatformWindow(platform, controls = {}) {
   const ses = session.fromPartition('persist:' + platform);
   ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
   const win = createBrowserWindow(
@@ -400,9 +426,8 @@ function createPlatformWindow(platform) {
         offscreen: verifyAccounts || verifyBrowserReset
       }
     },
-    platformBrowserSettings(platform)
+    { ...platformBrowserSettings(platform), ...controls }
   );
-  secureContents(win.webContents, platform);
   win.on('close', (event) => {
     if (!app.quitting) {
       event.preventDefault();
@@ -507,7 +532,9 @@ const { runExtraction: readAuthorWork } = createExtractionService({
   getTheme: () => uiTheme
 });
 authorService = createAuthorService({
-  fetcher: (url, options) => session.fromPartition('persist:liblib').fetch(url, options),
+  fetcher: (url, options, platform) =>
+    session.fromPartition('persist:' + platform).fetch(url, options),
+  readProfilePage: createProfilePageReader((platform) => getPlatformWindow(platform, false, true)),
   readWork: readAuthorWork,
   cancelRead: () => extractionScope.cancel(),
   getRoot: () => outputDirectory,
@@ -515,6 +542,7 @@ authorService = createAuthorService({
   cache: workCache,
   enrichAuthor: enableAuthorProfiles
     ? async (profile, signal) => {
+        if (!profile.authorInfo) return profile;
         send('status', {
           message: authorProfiles.enabled
             ? '正在读取作者公开资料与社交主页…'
@@ -541,10 +569,14 @@ authorService = createAuthorService({
     browserPreviewAbort.abort();
     browserPreviewAbort = new AbortController();
     currentResult = result;
-    currentLocalProject = false;
+    currentLocalProject = Boolean(result.localProject);
     store = project;
     send('result', result);
-    send('project', { ...store.summary(), root: outputDirectory });
+    send('project', {
+      ...store.summary(),
+      root: outputDirectory,
+      ...(result.localProject ? { manifestPath: project.profile.manifestPath } : {})
+    });
   }
 });
 async function readPage(input, options = {}) {
@@ -572,6 +604,10 @@ async function finishExtraction(result, options) {
   send('project', { ...store.summary(), root: outputDirectory });
   lastWorkMetadata = currentResult.metadata;
   const d = currentResult.diagnostics;
+  if (result.metadata.canvasAccess === 'not-public') {
+    status(result.metadata.canvasNote, 'done');
+    return currentResult;
+  }
   status(
     `读取完成：${d.nodeCount} 个节点，${d.readableTextCount ?? currentResult.entries.filter((e) => e.kind === 'text' && e.prompt.trim()).length} 个可读文本节点，${d.directGenerationCount ?? currentResult.entries.filter((e) => e.kind !== 'text' && e.prompt.trim()).length} 条直接提示词，${d.linkedGenerationCount ?? currentResult.entries.filter((e) => e.kind !== 'text' && e.referenceTexts.length).length} 个生成节点有关联文本，${currentResult.assets.length} 个项目资产。`,
     'done'
@@ -634,7 +670,7 @@ async function openLocalProject(input = '') {
     const currentPath = currentLocalProject && isCurrentProjectPath(target, store.directory);
     if (!target || currentPath) {
       const selected = await dialog.showOpenDialog(ui, {
-        title: '打开本地项目：选择 .画布项目.json',
+        title: '打开本地项目：选择画布项目或作者项目索引',
         defaultPath: currentPath
           ? path.dirname(store.directory)
           : store.directory || outputDirectory,
@@ -646,6 +682,15 @@ async function openLocalProject(input = '') {
     }
     const loaded = await loadLocalProject(target);
     authorService.clear();
+    if (loaded.collection) {
+      queue = null;
+      exportOptions = {
+        ...exportOptions,
+        ...sanitizeOptions(loaded.records.values().next().value.store.options)
+      };
+      authorService.openLocal(loaded);
+      return { manifestPath: loaded.manifestPath, collection: true };
+    }
     // Commit only after the entire project has been validated. Failed opens preserve the current project.
     browserGeneration++;
     browserPreviewAbort.abort();
@@ -667,6 +712,24 @@ async function openLocalProject(input = '') {
   } finally {
     localProjectOpening = false;
   }
+}
+function canvasContext() {
+  const profile = authorService.snapshot();
+  if (profile)
+    return {
+      key: 'author|' + profile.platform + '|' + profile.uuid,
+      works: profile.works
+        .filter((w) => profile.selectedIds.includes(w.id) && w.canvasAccess !== 'not-public')
+        .map(({ id, title, url }) => ({ id, title, url }))
+    };
+  if (!currentResult || currentResult.metadata.canvasAccess === 'not-public')
+    return { key: 'empty', works: [] };
+  const metadata = currentResult.metadata;
+  const id = metadata.workIdentity || metadata.canvasUrl || metadata.inputUrl;
+  return {
+    key: 'work|' + id,
+    works: [{ id, title: metadata.title, url: metadata.canvasUrl || metadata.inputUrl }]
+  };
 }
 async function collectBrowserSessions() {
   browserSessions.add(session.defaultSession);
@@ -837,7 +900,7 @@ function createQueue() {
         await project.prepareRedownload(selected.map((a) => a.id));
       } finally {
         await project.checkpoint();
-        if (authorWorkIds) authorService.refresh();
+        if (authorWorkIds) authorService.refresh({ assetsOnly: true });
         else if (currentResult === result) {
           send('assets', result.assets);
           send('project', project.summary());
@@ -846,7 +909,7 @@ function createQueue() {
     },
     onSettled: async () => {
       await project.checkpoint();
-      if (authorWorkIds) authorService.refresh();
+      if (authorWorkIds) authorService.refresh({ assetsOnly: true });
       else if (currentResult === result) {
         send('assets', result.assets);
         send('project', project.summary());
@@ -903,6 +966,11 @@ if (ownsInstance)
           );
       store = new ProjectStore(outputDirectory);
       mediaProtocol.install();
+      canvasBrowser = new CanvasBrowserWindow({
+        icon: APP_ICON,
+        getContext: canvasContext,
+        onError: (message) => status(message, 'error')
+      });
       ui = new BrowserWindow({
         icon: APP_ICON,
         width: 1440,
@@ -1097,6 +1165,9 @@ if (ownsInstance)
         return true;
       });
       handle('lab:open-local-project', openLocalProject);
+      handle('lab:open-canvas', () => {
+        return canvasBrowser.open();
+      });
       handle('lab:reveal', async (id) => {
         const a = currentResult?.assets.find((a) => a.id === id);
         if (!a || a.state !== 'done') throw new Error('此素材尚未下载。');
@@ -1201,6 +1272,7 @@ if (ownsInstance)
           workWindows,
           workCache,
           getResult: () => currentResult,
+          getVisibleWindow: () => platformWindow,
           visibilityPath
         });
         app.quit();
@@ -1264,6 +1336,20 @@ if (ownsInstance)
           getWindow: () => platformWindow,
           getFeedback: () => extractionFeedback,
           session
+        });
+        app.exit(0);
+        return;
+      }
+      if (process.argv.includes('--verify-canvas-browser')) {
+        await require('../开发辅助/验收工具/检查项/verify-canvas-browser.cjs')({
+          ui,
+          root: ROOT,
+          canvasBrowser,
+          authorService,
+          session,
+          dialog,
+          getResult: () => currentResult,
+          getLocal: () => currentLocalProject
         });
         app.exit(0);
         return;
@@ -1375,6 +1461,7 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   if (shutdownPending) return;
   app.quitting = true;
+  canvasBrowser?.dispose();
   independentBrowser.dispose();
   accounts.dispose();
   authorProfiles.dispose();

@@ -100,7 +100,7 @@ function readCanvas() {
     mediaResources: {}
   };
 }
-function inspectWork() {
+function inspectWork(_platform, readPublished = null) {
   if (location.protocol === 'chrome-error:') return { pageError: true, resolvedUrl: location.href };
   const visible = (el) => Boolean(el && el.getClientRects().length);
   const heading = [...document.querySelectorAll('h1')].find(visible);
@@ -114,9 +114,37 @@ function inspectWork() {
     heading?.parentElement?.querySelector('.flex.flex-col.gap-1 > span')?.textContent.trim() ||
     heading?.parentElement?.querySelector('img[alt]')?.getAttribute('alt') ||
     '';
+  const workId = location.pathname.match(/^\/home\/taptv\/[^/]+\/([^/]+)\/?$/)?.[1];
+  let fullVideo;
+  let fiber = heading?.[Object.keys(heading).find((key) => key.startsWith('__reactFiber'))];
+  for (let i = 0; fiber && i < 45; i++, fiber = fiber.return) {
+    const props = fiber.memoizedProps || {};
+    const item = [props.video, props.item, props.data, props.detail].find(
+      (value) => value && String(value.id) === workId && typeof value.video_url === 'string'
+    );
+    if (item && /^https:\/\//.test(item.video_url))
+      fullVideo = {
+        workId,
+        name: item.title || title,
+        url: item.video_url,
+        previewUrl: item.cover_image_url || '',
+        duration: item.duration
+      };
+  }
   return {
     title,
     author,
+    ...(readPublished
+      ? readPublished({
+          workId: location.pathname.match(/^\/home\/taptv\/[^/]+\/([^/]+)\/?$/)?.[1],
+          title,
+          heading,
+          detail: /^\/home\/taptv\/[^/]+\/[^/]+\/?$/.test(location.pathname),
+          process: Boolean(button),
+          login: /扫码登录|验证码登录|登录后查看|Sign in to/i.test(document.body?.innerText || '')
+        })
+      : {}),
+    ...(fullVideo ? { fullVideo } : {}),
     resolvedUrl: location.href,
     canOpenCanvas: Boolean(button),
     loginVisible: /扫码登录|验证码登录|登录后查看|Sign in to/i.test(document.body?.innerText || ''),

@@ -1,1 +1,28 @@
-:root{color-scheme:light;font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#34363a;background:#faf9fc}*{box-sizing:border-box}body{margin:0;overflow:hidden}nav{height:48px;display:flex;align-items:center;gap:2px;padding:5px 10px;border-bottom:1px solid #e4e3e7}button{flex:0 0 34px;width:34px;height:34px;border:0;background:transparent;border-radius:50%;display:grid;place-items:center;cursor:pointer}button:hover:not(:disabled){background:#e9e8ed}button:focus-visible,input:focus-visible{outline:2px solid #2765ca;outline-offset:-2px}button:disabled{opacity:.35;cursor:default}button img{width:21px;height:21px;opacity:.78}form{flex:1;min-width:0;height:34px;margin:0 0 0 9px;border-radius:20px;background:#ecebf0;display:flex;align-items:center;gap:8px;padding:0 12px}form:focus-within{background:white;box-shadow:inset 0 0 0 2px #94b7ed}.search-icon{width:19px;height:19px;opacity:.6;flex:none}input{width:100%;min-width:0;border:0;background:transparent;color:inherit;outline:0!important;font:13px "Segoe UI","Microsoft YaHei",sans-serif;height:30px;padding:0}input::placeholder{color:#5d6067}input[readonly]{cursor:text}#message{position:absolute;left:164px;right:10px;top:48px;height:26px;line-height:26px;margin:0;font-size:12px;color:#995921;background:#fff3dc;border-radius:0 0 6px 6px;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* Tab geometry, sizing and dragging styles come from vendor/chrome-tabs unchanged.
+   This file only places that component alongside the existing navigation UI. */
+:root{color-scheme:light;font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-size:13px;color:#34363a;background:#fff;--strip-height:42px;--tab-row-top:6px;--tab-row-height:28px;--toolbar-height:44px;--control-height:34px;--frame:#dee1e6;--surface:#fff}
+*{box-sizing:border-box}body{margin:0;overflow:hidden}button{font:inherit;color:inherit;border:0;background:transparent;display:grid;place-items:center;cursor:default;flex-shrink:0}button:focus-visible,[role=tab]:focus-visible{outline:2px solid #2765ca;outline-offset:-2px}button:disabled{opacity:.35}button img{pointer-events:none}button:hover:not(:disabled){background:#3c404314}[hidden]{display:none!important}
+.tabstrip{position:relative;height:var(--strip-height);display:flex;align-items:flex-start;background:var(--frame);padding-left:6px;user-select:none;-webkit-app-region:drag}
+/* Extend the 2px bottom bar across the search, new-tab and caption areas. */
+.tabstrip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--surface);z-index:10;pointer-events:none}
+.chrome-tabs{height:var(--strip-height);padding-top:6px;padding-bottom:2px}
+.chrome-tabs .chrome-tabs-bottom-bar{height:2px}
+/* The annotated content row is y=6..34, centered at 20px. The library's
+   36px tab shape retains its lower 8px tail without pulling the content down. */
+.chrome-tabs .chrome-tab .chrome-tab-content{align-items:center;padding-top:0;padding-bottom:8px}
+.chrome-tabs .chrome-tab .chrome-tab-dividers{top:calc(var(--tab-row-height) / 2);bottom:auto;height:22px;transform:translateY(-50%)}
+.chrome-tabs .chrome-tab .chrome-tab-title,.chrome-tabs .chrome-tab[active] .chrome-tab-title{color:#000;line-height:16px}
+.tabstrip button{-webkit-app-region:no-drag}
+#tab-search{width:var(--tab-row-height);height:var(--tab-row-height);padding:0;border-radius:8px;background:#edf2fe;margin:var(--tab-row-top) 6px 0 0}#tab-search img{width:16px;height:16px}
+#tabs{flex:1;min-width:0;-webkit-app-region:drag}
+.chrome-tab,.chrome-tab *{-webkit-app-region:no-drag}
+.chrome-tabs[aria-disabled=true] .chrome-tab-content{pointer-events:none}
+.chrome-tabs .chrome-tab.loading .chrome-tab-favicon{animation:loading 1.2s linear infinite}
+@keyframes loading{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.chrome-tabs .chrome-tab.loading .chrome-tab-favicon{animation:none}}
+#new-tab{position:absolute;top:var(--tab-row-top);width:var(--tab-row-height);height:var(--tab-row-height);padding:0;border-radius:50%;display:grid;place-items:center;color:#5f6368;z-index:20}#new-tab img{display:none}#new-tab::before{content:"";display:block;width:16px;height:16px;background:currentColor;mask:url("icons/add.svg") center/contain no-repeat}#new-tab:hover:not(:disabled){background:#bdcceb}#new-tab:active:not(:disabled){background:#b1c3e3}.window-drag{flex:none;width:34px;height:100%}.native-controls-space{width:138px;height:100%;flex:none;pointer-events:none;-webkit-app-region:no-drag}
+nav{height:var(--toolbar-height);position:relative;z-index:4;display:flex;align-items:center;gap:4px;padding:4px 6px 6px;background:var(--surface)}
+nav>button{flex:0 0 var(--control-height);width:var(--control-height);height:var(--control-height);border-radius:50%;padding:7px}nav>button img{width:20px;height:20px;opacity:.78}
+form{flex:1;min-width:0;height:var(--control-height);margin:0 0 0 5px;border-radius:20px;background:#ecebf0;display:flex;align-items:center;gap:8px;padding:0 12px}
+form:focus-within{background:white;box-shadow:inset 0 0 0 2px #94b7ed}.search-icon{width:16px;height:16px;opacity:.6;flex:none}input{width:100%;min-width:0;border:0;background:transparent;color:inherit;outline:0;font:13px "Segoe UI","Microsoft YaHei",sans-serif;height:30px;padding:0}input::placeholder{color:#5d6067}
+#message{position:absolute;left:164px;right:10px;top:45px;height:40px;line-height:40px;margin:0;z-index:5;font-size:12px;color:#995921;background:#fff3dc;border-radius:16px;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

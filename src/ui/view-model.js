@@ -5,12 +5,22 @@ export const TYPES = {
   text: '独立文本'
 };
 export function contentSummary(result) {
+  if (result?.metadata.canvasAccess === 'not-public') return result.metadata.canvasNote;
   const entries = result?.entries || [],
     texts = entries.filter((e) => e.kind === 'text'),
     direct = entries.filter((e) => e.kind !== 'text' && e.prompt?.trim()),
     linked = entries.filter((e) => e.kind !== 'text' && e.referenceTexts?.length),
     failed = texts.filter((e) => e.textState === 'unreadable');
-  return `文本节点 ${texts.length} 个 · 直接提示词 ${direct.length} 条 · 有关联文本的生成节点 ${linked.length} 个${failed.length ? ' · 文本读取失败 ' + failed.length + ' 个' : ''}`;
+  const unpublished = result?.authorProfile?.unpublishedIds?.length || 0;
+  return (
+    (unpublished ? `${unpublished} 部作品未公开画布，仅提供成片下载。` : '') +
+    `文本节点 ${texts.length} 个 · 直接提示词 ${direct.length} 条 · 有关联文本的生成节点 ${linked.length} 个${failed.length ? ' · 文本读取失败 ' + failed.length + ' 个' : ''}`
+  );
+}
+export function boardAssets(result) {
+  return (result?.assets || []).filter(
+    (a) => !result.authorProfile?.unpublishedIds?.includes(a.workId)
+  );
 }
 export function promptKind(kind) {
   return kind === 'image' || String(kind).startsWith('image_') ? 'image' : kind;
@@ -34,7 +44,7 @@ export function filtered(result, scope, kind, query = '') {
   const q = query.trim().toLowerCase();
   const items =
     scope === 'assets'
-      ? [...result.assets].sort(
+      ? boardAssets(result).sort(
           (a, b) => Number(b.role === 'full-video') - Number(a.role === 'full-video')
         )
       : result.entries;

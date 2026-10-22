@@ -102,7 +102,8 @@ app
       assert.equal(BrowserWindow.fromWebContents(page), win);
       assert.equal(page.session, ses);
       assert.equal(await page.executeJavaScript('typeof window.browserToolbar'), 'undefined');
-      assert.equal(await evaluate('document.querySelectorAll("button").length'), 4);
+      assert.equal(await evaluate('document.querySelectorAll("nav>button").length'), 4);
+      assert.equal(await evaluate('document.querySelectorAll("[role=tab]").length'), 1);
       record(
         'Original session and page ownership preserved; four navigation buttons with no submit button'
       );
@@ -131,6 +132,43 @@ app
       await until(() => page.getURL().startsWith('https://www.google.com/search?'));
       assert.equal(new URL(page.getURL()).searchParams.get('q'), '画布测试 & 图片');
       record('Same-document navigation updates address; keywords submit to Google');
+      const firstId = win.browserToolbar.activeId;
+      await page.executeJavaScript('window.retainedValue="网页状态"');
+      toolbar.sendInputEvent({ type: 'keyDown', keyCode: 'T', modifiers: ['control'] });
+      toolbar.sendInputEvent({ type: 'keyUp', keyCode: 'T', modifiers: ['control'] });
+      await until(() => win.browserToolbar.tabs.size === 2);
+      const secondId = win.browserToolbar.activeId;
+      await until(
+        async () =>
+          await evaluate(
+            'document.activeElement.id === "address" && document.getElementById("address").value === ""'
+          )
+      );
+      await enter(origin + '/tab-two');
+      await until(() => win.webContents.getURL() === origin + '/tab-two');
+      assert.equal(win.webContents.session, ses);
+      await win.webContents.executeJavaScript('window.secondValue=42');
+      toolbar.sendInputEvent({ type: 'keyDown', keyCode: 'Tab', modifiers: ['control', 'shift'] });
+      toolbar.sendInputEvent({ type: 'keyUp', keyCode: 'Tab', modifiers: ['control', 'shift'] });
+      await until(() => win.browserToolbar.activeId === firstId);
+      assert.equal(win.webContents, page);
+      assert.equal(await page.executeJavaScript('window.retainedValue'), '网页状态');
+      await evaluate('window.browserToolbar.action("activate",' + JSON.stringify(secondId) + ')');
+      assert.equal(await win.webContents.executeJavaScript('window.secondValue'), 42);
+      await evaluate(
+        'window.browserToolbar.action("reorder",' + JSON.stringify([secondId, firstId]) + ')'
+      );
+      assert.deepEqual([...win.browserToolbar.tabs.keys()], [secondId, firstId]);
+      await evaluate('window.browserToolbar.action("close-tab",' + JSON.stringify(secondId) + ')');
+      assert.equal(win.browserToolbar.tabs.size, 1);
+      assert.equal(win.webContents, page);
+      await evaluate('window.browserToolbar.action("restore-tab")');
+      await until(() => win.webContents.getURL() === origin + '/tab-two');
+      assert.equal(win.webContents.session, ses);
+      await evaluate('window.browserToolbar.action("close-tab",' + JSON.stringify(secondId) + ')');
+      record(
+        'Ctrl+T creates and focuses an empty tab; tabs retain independent page state and sessions; switching, ordering, closing and restoring work'
+      );
       locked = '正在读取画布';
       await until(async () => await evaluate('document.getElementById("address").readOnly'));
       const held = page.getURL();
@@ -139,6 +177,16 @@ app
         false
       );
       assert.equal(page.getURL(), held);
+      assert.equal((await evaluate('window.browserToolbar.action("new-tab")')).ok, false);
+      assert.equal(
+        (
+          await evaluate(
+            'window.browserToolbar.action("close-tab",' + JSON.stringify(firstId) + ')'
+          )
+        ).ok,
+        false
+      );
+      assert.equal(win.browserToolbar.tabs.size, 1);
       locked = '';
       await until(async () => !(await evaluate('document.getElementById("address").readOnly')));
       assert.equal(win.browserToolbar.state().error, '');
@@ -149,12 +197,23 @@ app
       await until(() => page.isDevToolsOpened());
       assert.equal(toolbar.isDevToolsOpened(), false);
       await until(() => page.devToolsWebContents && !page.devToolsWebContents.isLoading());
+      endTransparentRead(win, true);
       win.setFocusable(true);
       win.focus();
+      await wait(100);
       page.devToolsWebContents.focus();
-      page.devToolsWebContents.sendInputEvent({ type: 'keyDown', keyCode: 'F12' });
+      await wait(150);
+      // sendInputEvent on DevTools does not dispatch native menu accelerators.
+      // Exercise that accelerator's actual callback with inspector focus instead.
+      assert.equal(
+        require('electron').webContents.getFocusedWebContents(),
+        page.devToolsWebContents
+      );
+      require('electron').Menu.getApplicationMenu().getMenuItemById('devtools-f12').click();
       await until(() => !page.isDevToolsOpened());
-      record('F12 from address bar opens website developer tools and closes from inspector focus');
+      record(
+        'F12 from address bar opens website developer tools; its native menu action closes the focused inspector'
+      );
       let child;
       page.setWindowOpenHandler(() => ({
         action: 'allow',
@@ -175,13 +234,44 @@ app
       win.setContentSize(900, 600);
       await wait(100);
       const bounds = win.contentView.children.map((view) => view.getBounds());
-      assert.equal(bounds[0].y, 48);
-      assert.equal(bounds[0].height, 552);
-      assert.equal(bounds[1].height, 48);
+      assert.equal(bounds[0].y, 86);
+      assert.equal(bounds[0].height, 514);
+      assert.equal(bounds[1].height, 86);
+      const metrics = await evaluate(
+        '(()=>{const r=s=>document.querySelector(s).getBoundingClientRect();return {strip:r(".tabstrip").height,toolbar:r("nav").height,address:r("form").height,tab:r(".chrome-tab").height,overflow:document.documentElement.scrollWidth>innerWidth}})()'
+      );
+      assert.deepEqual(metrics, { strip: 42, toolbar: 44, address: 34, tab: 36, overflow: false });
       endTransparentRead(win);
       beginTransparentRead(win);
       assert.equal(win.getOpacity(), 0);
       record('Resize and transparent display retain toolbar and website layout');
+      win.setContentSize(680, 600);
+      for (let i = 0; i < 12; i++) win.browserToolbar.addTab({ url: 'about:blank' });
+      await wait(100);
+      const narrow = await evaluate(
+        '(()=>{const p=document.getElementById("new-tab").getBoundingClientRect(),a=document.querySelector("form").getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,plusVisible:p.left>=0&&p.right<=innerWidth-138,addressVisible:a.left>=0&&a.right<=innerWidth}})()'
+      );
+      assert.deepEqual(narrow, { overflow: false, plusVisible: true, addressVisible: true });
+      const ids = [...win.browserToolbar.tabs.keys()];
+      for (const id of ids) if (id !== firstId) win.browserToolbar.closeTab(id);
+      await win.browserToolbar.action('activate', firstId);
+      win.setFullScreen(true);
+      await until(() => win.isFullScreen());
+      assert.equal(win.contentView.children[0].getBounds().y, 0);
+      win.setFullScreen(false);
+      await until(() => !win.isFullScreen());
+      win.setContentSize(900, 600);
+      record(
+        'Narrow window with thirteen tabs keeps new-tab button and address visible; fullscreen uses all content space'
+      );
+      const out = path.resolve(__dirname, '../验收记录/v1.3/browser-toolbar');
+      await fs.mkdir(out, { recursive: true });
+      endTransparentRead(win, true);
+      await wait(150);
+      await fs.writeFile(
+        path.join(out, 'unified-toolbar.png'),
+        (await toolbar.capturePage()).toPNG()
+      );
       win.destroy();
       await until(() => page.isDestroyed() && toolbar.isDestroyed());
       assert.equal(page.isDestroyed(), true);
@@ -189,8 +279,6 @@ app
       assert.equal(BaseWindow.getAllWindows().includes(win), false);
       record('Closing window releases both renderers');
       console.log('PASS browser toolbar:', checks.join('; '));
-      const out = path.resolve(__dirname, '../验收记录/v1.3/browser-toolbar');
-      await fs.mkdir(out, { recursive: true });
       await fs.writeFile(
         path.join(out, 'report.json'),
         JSON.stringify({ passed: true, checks }, null, 2)

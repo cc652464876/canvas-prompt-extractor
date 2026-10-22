@@ -1,6 +1,13 @@
 import globals from 'globals';
 export default [
-  { ignores: ['node_modules/**', 'build/**', '开发辅助/验收记录/**'] },
+  {
+    ignores: [
+      'node_modules/**',
+      'build/**',
+      '开发辅助/验收记录/**',
+      'src/browser-toolbar/vendor/**'
+    ]
+  },
   {
     files: [
       'src/**/*.js',
@@ -20,7 +27,7 @@ export default [
     }
   },
   {
-    files: ['src/ui/**/*.js'],
+    files: ['src/ui/**/*.js', 'src/canvas-browser/**/*.js'],
     languageOptions: {
       sourceType: 'module',
       globals: {

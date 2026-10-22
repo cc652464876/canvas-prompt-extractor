@@ -16,6 +16,10 @@ function workInfoText(metadata) {
     ['作品网址', metadata.inputUrl],
     ['解析后网址', metadata.resolvedUrl],
     ['画布网址', metadata.canvasUrl],
+    [
+      '画布状态',
+      metadata.canvasNote || (metadata.canvasAccess === 'public' ? '已公开' : undefined)
+    ],
     ['视频原始网址', metadata.fullVideo?.url],
     ['平台', metadata.platform],
     ['作品名称', metadata.title],
@@ -53,7 +57,7 @@ function workInfoText(metadata) {
   ];
   const profiles = metadata.authorProfiles || [];
   const provided = profiles.some(
-    (profile) => profile.platform === 'liblib' && profile.status === 'read'
+    (profile) => profile.platform === (metadata.platform || 'liblib') && profile.status === 'read'
   );
   const statuses = {
     read: '已读取',
@@ -63,13 +67,20 @@ function workInfoText(metadata) {
     invalid: '链接无法读取',
     'link-only': '已记录链接'
   };
-  for (const platform of ['liblib', 'xiaohongshu', 'douyin', 'bilibili', 'other']) {
+  for (const platform of [
+    metadata.platform || 'liblib',
+    'xiaohongshu',
+    'douyin',
+    'bilibili',
+    'other'
+  ]) {
     const matches = profiles.filter((profile) => profile.platform === platform);
     if (platform === 'other' && !matches.length) continue;
     lines.push('### ' + LABELS[platform], '');
     if (!matches.length) {
       lines.push(
-        '- 资料状态：' + (provided && platform !== 'liblib' ? '作者未填写' : '未读取'),
+        '- 资料状态：' +
+          (provided && platform !== (metadata.platform || 'liblib') ? '作者未填写' : '未读取'),
         ''
       );
       continue;

@@ -6,6 +6,9 @@ async function build() {
   const root = path.resolve(__dirname, '..'),
     out = path.join(root, 'build');
   await fs.mkdir(out, { recursive: true });
+  // The canvas now uses the shared browser toolbar; remove its obsolete UI bundle.
+  for (const file of ['canvas-browser.js', 'canvas-browser.js.map'])
+    await fs.rm(path.join(out, file), { force: true });
   const theme = require('../src/theme.cjs'),
     typography = require('../src/typography.cjs');
   for (const font of Object.values(typography.FONTS).filter((font) => font.file)) {

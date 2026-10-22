@@ -105,9 +105,11 @@ test('Category filtering excludes other node data from JSON export', () => {
     ]),
     metadata
   );
+  r.canvasSnapshot = { nodes: [{ data: { content: '私人文本' } }] }; // Legacy reconstruction projects must not leak unselected text.
   const selected = filterResult(r, ['video']);
   assert.equal(selected.entries.length, 1);
   assert.equal(selected.nodes, undefined);
+  assert.equal(selected.canvasSnapshot, undefined);
   assert.ok(!JSON.stringify(selected).includes('私人文本'));
 });
 test('Filename is based on work title and stays a safe single component', () => {

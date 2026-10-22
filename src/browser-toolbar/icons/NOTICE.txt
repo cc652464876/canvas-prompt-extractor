@@ -1,3 +1,8 @@
 Google Material Symbols
 Source: https://github.com/google/material-design-icons
 Licensed under Apache License 2.0; see LICENSE.
+
+chrome.svg: Bootstrap Icons browser-chrome, v1.13.1.
+Source: https://github.com/twbs/icons/blob/v1.13.1/icons/browser-chrome.svg
+Licensed under MIT; see LICENSE-bootstrap-icons.txt.
+Adaptation: fixed fill to #5f6368 for the default browser tab icon.

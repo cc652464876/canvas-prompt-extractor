@@ -68,6 +68,18 @@ async function readProfile(input, fetcher, signal, onProgress = () => {}) {
         title: String(item.name || '未命名作品'),
         cover: safeUrl(item.coverUrl),
         url: 'https://www.liblib.tv/detail/' + id,
+        canvasId: typeof item.projectUuid === 'string' ? item.projectUuid : '',
+        canvasAccess:
+          item.snapshotId === undefined ? 'unknown' : item.snapshotId ? 'public' : 'not-public',
+        fullVideo: {
+          workId: id,
+          name: String(item.name || '未命名作品'),
+          url: safeUrl(item.finalOutput),
+          previewUrl: safeUrl(item.coverUrl)
+        },
+        ...(item.snapshotId !== undefined && !item.snapshotId
+          ? { note: '画布未公开，仅可下载作品视频' }
+          : {}),
         state: 'idle',
         error: ''
       });

@@ -52,7 +52,10 @@ function namespaceResult(original, work) {
     return value;
   }
   const result = copy(original);
-  result.metadata.workIdentity = 'liblib-template:' + work.id;
+  result.metadata.workIdentity =
+    (original.metadata.platform === 'liblib' ? 'liblib-template:' : 'work:') + work.id;
+  result.metadata.workId = work.id;
+  if (work.canvasId) result.metadata.canvasId = work.canvasId;
   for (const item of [...result.assets, ...result.entries, ...(result.nodeSummaries || [])]) {
     item.workId = work.id;
     item.workTitle = work.title;
@@ -85,6 +88,9 @@ function mergeResults(profile, results, selectedIds) {
       total: profile.works.length,
       selectedIds: [...selectedIds],
       loadedIds: selectedIds.filter((id) => results.has(id)),
+      unpublishedIds: selectedIds.filter(
+        (id) => results.get(id)?.metadata.canvasAccess === 'not-public'
+      ),
       pending: selectedIds.filter(
         (id) => !results.has(id) && !profile.works.find((w) => w.id === id)?.error
       ).length
@@ -119,7 +125,7 @@ function mergeResults(profile, results, selectedIds) {
       aggregate.diagnostics.warnings.push(work.title + '：' + work.error);
   aggregate.entries.sort(
     (a, b) =>
-      a.group.localeCompare(b.group, 'zh') ||
+      String(a.group || '').localeCompare(String(b.group || ''), 'zh') ||
       (a.position?.y || 0) - (b.position?.y || 0) ||
       (a.position?.x || 0) - (b.position?.x || 0)
   );
@@ -137,6 +143,11 @@ class AuthorStore {
     this.authorDirectory = path.join(root, safeFolder(profile.platform + '_' + profile.author));
   }
   async prepare() {
+    if (this.profile.localProject) {
+      this.directory = this.authorDirectory = this.profile.directory;
+      for (const record of this.records) record.store.options = this.options;
+      return this;
+    }
     await fs.mkdir(this.root, { recursive: true });
     let index = {};
     const file = path.join(this.root, '.作者索引.json'),
@@ -167,6 +178,27 @@ class AuthorStore {
     }
     this.directory = this.authorDirectory = path.join(this.root, name);
     await fs.mkdir(this.directory, { recursive: true });
+    await atomic(
+      path.join(this.directory, '.作者选集.json'),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          platform: this.profile.platform,
+          author: this.profile.author,
+          uuid: this.profile.uuid,
+          url: this.profile.url,
+          works: this.profile.works.map(({ id, title, url, canvasAccess, note }) => ({
+            id,
+            title,
+            url,
+            canvasAccess,
+            note
+          }))
+        },
+        null,
+        2
+      )
+    );
     for (const record of this.records) {
       if (!record.store || record.store.root !== this.directory) {
         const project = new ProjectStore(this.directory, {

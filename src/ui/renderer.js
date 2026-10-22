@@ -1,4 +1,5 @@
 import { createAuthorControls } from './author-controls.js';
+import { profileAddress as jimengProfileAddress } from '../platforms/jimeng/profile-address.cjs';
 import { createAccountControls } from './account-controls.js';
 import { createThemeManager } from './theme-manager.js';
 import { createTypographyManager } from './typography-manager.js';
@@ -8,6 +9,7 @@ import {
   SOURCE,
   promptKind,
   contentSummary,
+  boardAssets,
   downloadMetrics,
   filtered,
   countKinds,
@@ -195,6 +197,10 @@ function status(message, phase = 'running') {
     $('project-name').textContent = phase === 'cancelled' ? '读取已停止' : '读取未完成';
   }
 }
+function syncProfileNote() {
+  $('jimeng-profile-note').hidden = !jimengProfileAddress($('url').value);
+}
+$('url').addEventListener('input', syncProfileNote);
 function checkbox(root, key, label, onChange) {
   const wrapper = el('label'),
     input = el('input');
@@ -334,7 +340,7 @@ function updateButtons() {
     !selected().length ||
     authorFailed ||
     Boolean(result?.authorProfile?.pending) ||
-    (author && !result?.entries.length);
+    !result?.entries.length;
   const workCount = author ? author.selectedIds.length : result ? 1 : 0;
   $('save-prompts').textContent = saving ? '停止保存' : `保存提示词（${workCount}）`;
   $('download').disabled =
@@ -347,11 +353,21 @@ function updateButtons() {
     !result ||
     !mediaSelected().length ||
     (!active &&
-      (authorFailed || Boolean(result?.authorProfile?.pending) || !result?.assets.length));
+      (authorFailed ||
+        Boolean(result?.authorProfile?.pending) ||
+        !result?.assets.some((a) => a.url || a.state === 'done')));
   $('retry').disabled =
     locked || !result?.assets.some((a) => a.state === 'failed' && mediaSelected().includes(a.kind));
   $('resume-download').hidden = !active || !downloads?.paused;
   $('open-local-project').disabled = locked;
+  $('open-canvas').disabled =
+    localOpening ||
+    authorLoading ||
+    (author
+      ? !author.works.some(
+          (w) => author.selectedIds.includes(w.id) && w.canvasAccess !== 'not-public'
+        )
+      : !result || result.metadata.canvasAccess === 'not-public');
   $('open-local-project').textContent = localOpening ? '正在打开…' : '打开本地项目';
   $('open-local-project').setAttribute('aria-busy', String(localOpening));
   $('local-project-path').disabled = locked;
@@ -364,6 +380,12 @@ function updateButtons() {
   syncAuthorViews();
   authorControls.render();
   for (const node of readerElements.values()) {
+    for (const tools of node.querySelectorAll('.media-tools')) {
+      const asset = assetMap.get(tools.dataset.assetId);
+      if (!asset) continue;
+      tools.querySelector('.state-tag').textContent = mediaState(asset);
+      tools.querySelector('button').hidden = asset.state !== 'done';
+    }
     const a = assetMap.get(node.dataset.currentAsset),
       b = node.querySelector('.download-one');
     if (b) {
@@ -859,8 +881,10 @@ function mediaOutput(a, context) {
     stage.append(player, play);
   }
   const tools = el('div', '', 'media-tools');
-  tools.append(el('span', mediaState(a), 'state-tag'));
-  if (a.state === 'done') tools.append(action('定位文件', () => reveal(a)));
+  tools.dataset.assetId = a.id;
+  const locate = action('定位文件', () => reveal(a));
+  locate.hidden = a.state !== 'done';
+  tools.append(el('span', mediaState(a), 'state-tag'), locate);
   stage.append(tools);
   return box;
 }
@@ -1270,7 +1294,7 @@ function rebuildReaders() {
   updateReaderLayout();
 }
 function renderFilters() {
-  const items = scope === 'assets' ? result?.assets || [] : result?.entries || [],
+  const items = scope === 'assets' ? boardAssets(result) : result?.entries || [],
     labels =
       scope === 'assets' ? MEDIA : { video: '视频', image: '图片', audio: '音频', text: '文本' },
     counts = countKinds(items, Object.keys(labels)),
@@ -1301,7 +1325,7 @@ function renderBoard() {
   pressed($('tab-prompts'), scope === 'prompts');
   pressed($('tab-assets'), scope === 'assets');
   $('prompt-total').textContent = result?.entries.length || 0;
-  $('asset-total').textContent = result?.assets.length || 0;
+  $('asset-total').textContent = boardAssets(result).length;
   const grid = $('entries');
   grid.dataset.dense = String(columns >= 7);
   grid.dataset.text = String(columns === 0);
@@ -1328,17 +1352,25 @@ function renderBoard() {
     empty.append(
       el(
         'h2',
-        author && !author.selectedIds.length
-          ? '选择作品后显示内容'
-          : filters[scope].size
-            ? '当前分类没有匹配内容'
-            : '请选择要查看的类别'
+        author &&
+          result.authorProfile?.unpublishedIds?.length === author.selectedIds.length &&
+          author.selectedIds.length
+          ? '所选作品未公开画布'
+          : author && !author.selectedIds.length
+            ? '选择作品后显示内容'
+            : filters[scope].size
+              ? '当前分类没有匹配内容'
+              : '请选择要查看的类别'
       ),
       el(
         'p',
-        author && !author.selectedIds.length
-          ? '点击上方作品卡片，可同时选择多部。'
-          : '分类按钮支持多选；浏览筛选不改变保存或下载范围。'
+        author &&
+          result.authorProfile?.unpublishedIds?.length === author.selectedIds.length &&
+          author.selectedIds.length
+          ? '作品保留在上方作品集中；可在下载区下载作品视频。'
+          : author && !author.selectedIds.length
+            ? '点击上方作品卡片，可同时选择多部。'
+            : '分类按钮支持多选；浏览筛选不改变保存或下载范围。'
       )
     );
     grid.append(empty);
@@ -1425,7 +1457,7 @@ function showDownloads(d) {
       .map((a) => el('p', a.name + '：' + a.error))
   );
   $('failures').hidden = !d.failed;
-  $('retry').hidden = !d.failed;
+  $('retry').hidden = !d.files.some((a) => a.state === 'failed');
 }
 function applyProject(payload) {
   project = payload;
@@ -1522,10 +1554,12 @@ window.lab.onEvent(({ type, payload, taskId }) => {
       filters.assets = new Set(Object.keys(MEDIA));
     }
     clearVideoThumbnails();
-    $('failures').hidden = true;
-    $('download-attention').hidden = true;
-    $('failed-files').replaceChildren();
-    $('retry').hidden = true;
+    if (!preservedDownloads) {
+      $('failures').hidden = true;
+      $('download-attention').hidden = true;
+      $('failed-files').replaceChildren();
+      $('retry').hidden = true;
+    }
     closeMediaPreview();
     clearReaders();
     result = payload;
@@ -1533,6 +1567,7 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     page = 0;
     assetMap = new Map(result.assets.map((a) => [a.id, a]));
     $('url').value = result.metadata.inputUrl;
+    syncProfileNote();
     $('project-name').textContent = filename();
     $('project-name').title = filename();
     $('saved').textContent = '尚未保存提示词';
@@ -1550,20 +1585,22 @@ window.lab.onEvent(({ type, payload, taskId }) => {
   if (type === 'project') applyProject(payload);
   if (type === 'downloads') showDownloads(payload);
   if (type === 'assets' && result) {
-    result.assets = payload;
-    assetMap = new Map(payload.map((a) => [a.id, a]));
-    prepareVideoThumbnails(payload, { full: onlinePreview() });
+    // Keep the objects used by open readers and media callbacks alive.
+    result.assets = payload.map((asset) => Object.assign(assetMap.get(asset.id) || {}, asset));
+    assetMap = new Map(result.assets.map((a) => [a.id, a]));
+    prepareVideoThumbnails(result.assets, { full: onlinePreview() });
     refreshDownload();
+    updateButtons();
     if (!downloads?.active) {
       clearTimeout(renderTimer);
       renderTimer = setTimeout(() => {
         renderBoard();
-        rebuildReaders();
       }, 120);
     }
   }
 });
 async function extract() {
+  syncProfileNote();
   const input = $('url').value.trim();
   if (!input) {
     status('请先粘贴作品链接或作者主页地址。', 'error');
@@ -1602,6 +1639,10 @@ async function openLocalProject() {
   }
 }
 $('open-local-project').addEventListener('click', openLocalProject);
+$('open-canvas').addEventListener('click', async () => {
+  const response = await window.lab.openCanvas();
+  if (!response.ok) status(response.error, 'error');
+});
 $('local-project-path').addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();

@@ -149,7 +149,7 @@ function readCanvas() {
   };
 }
 
-function inspectWork() {
+function inspectWork(_platform, readPublished = null) {
   if (location.protocol === 'chrome-error:') return { pageError: true, resolvedUrl: location.href };
   const visible = (el) => Boolean(el && el.getClientRects().length);
   const body = document.body?.innerText || '';
@@ -173,11 +173,25 @@ function inspectWork() {
     }
   }
   const button = Array.from(document.querySelectorAll('button, [role="button"]')).find(
-    (b) => visible(b) && /^查看(制作|创作)过程$/.test((b.innerText || b.textContent).trim())
+    (b) =>
+      visible(b) &&
+      !b.disabled &&
+      b.getAttribute('aria-disabled') !== 'true' &&
+      /^(查看(制作|创作)过程|查看关联的画布)$/.test((b.innerText || b.textContent).trim())
   );
   return {
     title,
     author,
+    ...(readPublished
+      ? readPublished({
+          workId: location.pathname.match(/^\/ai-tool\/work-detail\/([^/]+)\/?$/)?.[1],
+          title,
+          heading,
+          detail: /^\/ai-tool\/work-detail\/[^/]+\/?$/.test(location.pathname),
+          process: Boolean(button),
+          login: /欢迎登录|请输入手机号/.test(body)
+        })
+      : {}),
     resolvedUrl: location.href,
     canOpenCanvas: Boolean(button),
     loginVisible: /欢迎登录|请输入手机号/.test(body),
@@ -208,7 +222,11 @@ function openCanvas(allowClick = true, allowDismiss = true) {
   if ([...document.querySelectorAll('.react-flow, iframe[src*="/ai-canvas/"]')].some(visible))
     return { alreadyOpen: true };
   const button = buttons.find(
-    (b) => visible(b) && /^查看(制作|创作)过程$/.test((b.innerText || b.textContent).trim())
+    (b) =>
+      visible(b) &&
+      !b.disabled &&
+      b.getAttribute('aria-disabled') !== 'true' &&
+      /^(查看(制作|创作)过程|查看关联的画布)$/.test((b.innerText || b.textContent).trim())
   );
   if (button) {
     if (allowClick) button.scrollIntoView({ block: 'center', behavior: 'instant' });

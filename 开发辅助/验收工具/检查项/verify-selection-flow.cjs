@@ -15,6 +15,7 @@ module.exports = async ({
   workWindows,
   workCache,
   getResult,
+  getVisibleWindow,
   visibilityPath
 }) => {
   const out = path.join(root, '开发辅助/验收记录/v1.3/selection-flow');
@@ -52,6 +53,10 @@ module.exports = async ({
         ';document.querySelector(".react-flow").__reactFiber_fixture={memoizedProps:{nodes:snapshot.nodes,edges:snapshot.edges}};</script>';
       return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
+    if (address.pathname === '/profile')
+      return new Response('<!doctype html><title>作者主页</title><h1>作者主页</h1>', {
+        headers: { 'content-type': 'text/html;charset=utf-8' }
+      });
     return new Response(null, { status: 204 });
   });
   const until = async (predicate) => {
@@ -85,6 +90,17 @@ module.exports = async ({
     assert.ok(authorService.snapshot().works.every((work) => work.state === 'idle'));
     assert.equal(requests.filter((request) => request.startsWith('/detail/')).length, 0);
     assert.equal(workWindows.windows.size, 0);
+    assert.equal((await run('window.lab.visible(true)')).ok, true);
+    const profileWindow = getVisibleWindow();
+    assert.ok(profileWindow && profileWindow.isVisible());
+    assert.equal(isTransparentRead(profileWindow), false);
+    assert.equal(profileWindow.getOpacity(), 1);
+    await run('window.lab.visible(false)');
+    assert.equal(profileWindow.getOpacity(), 0);
+    await run('window.lab.visible(true)');
+    assert.equal(profileWindow.getOpacity(), 1);
+    await run('window.lab.visible(false)');
+    check('Before any work tab exists, hiding and revealing restores the author homepage window');
     await run("document.getElementById('author-clear').click()");
     await until(() => authorService.snapshot().selectedIds.length === 0);
     assert.equal(await run("document.getElementById('author-read').disabled"), true);
@@ -106,7 +122,29 @@ module.exports = async ({
     assert.ok(getResult().assets.length > 0);
     check('Clicking read loads the profile and selects all three works by default');
     assert.equal(workWindows.windows.size, 3);
-    const windows = [...workWindows.windows.values()].map((record) => record.window);
+    const records = [...workWindows.windows.values()];
+    const windows = [...new Set(records.map((record) => record.window))];
+    assert.equal(windows.length, 1);
+    const browser = windows[0].browserToolbar;
+    const contents = records.map((record) => record.tab.contents);
+    assert.equal(new Set(contents).size, 3);
+    const sorted = records.map((record) => record.tab.id).reverse();
+    await browser.action('reorder', sorted);
+    assert.deepEqual(
+      browser.state().tabs.map((tab) => tab.id),
+      sorted
+    );
+    assert.ok(contents.every((wc) => wc.session === ses));
+    windows[0].minimize();
+    await until(() => windows[0].isMinimized());
+    await run('window.lab.visible(true)');
+    await until(() => !windows[0].isMinimized());
+    assert.equal(windows[0].getOpacity(), 1);
+    await run('window.lab.visible(false)');
+    check('Explicit reveal restores the shared work window from minimized and transparent states');
+    check(
+      'Three work pages share one native window with independent contents and draggable tab ordering'
+    );
     assert.ok(
       windows.every(
         (window) => window.isVisible() && window.getOpacity() === 0 && isTransparentRead(window)
@@ -120,21 +158,17 @@ module.exports = async ({
       true
     );
     assert.equal((await run('window.lab.visible(true)')).ok, true);
-    const third = windows[2];
-    assert.equal(third.getOpacity(), 0);
-    assert.ok(
-      windows.slice(0, 2).every((window) => window.isVisible() && window.getOpacity() === 1)
-    );
+    assert.equal(records[2].tab.hidden, true);
+    assert.ok(windows.every((window) => window.isVisible() && window.getOpacity() === 1));
     await run(`window.lab.selectWorks(${JSON.stringify([ids[0]])})`);
-    assert.equal(windows[1].getOpacity(), 0);
-    assert.equal(windows[1].isVisible(), true);
-    assert.equal(windows[1].isDestroyed(), false);
+    assert.equal(records[1].tab.hidden, true);
+    assert.equal(contents[1].isDestroyed(), false);
     await run('window.lab.visible(false)');
     await run(`window.lab.selectWorks(${JSON.stringify([ids[0], ids[2]])})`);
     assert.ok(windows.every((window) => window.getOpacity() === 0));
     assert.equal(requests.filter((request) => request.startsWith('/detail/')).length, readCounts);
     check(
-      'Display affects only selected works; deselection makes a live page transparent without reloading'
+      'Deselection hides tabs while preserving live pages; the shared window follows global visibility'
     );
     await run('window.lab.visible(true)');
     ui.show();
@@ -152,6 +186,11 @@ module.exports = async ({
       }
     await run('window.lab.selectWorks(' + JSON.stringify([ids[0]]) + ')');
     await run('window.lab.selectWorks(' + JSON.stringify(ids) + ')');
+    assert.deepEqual(
+      browser.state().tabs.map((tab) => tab.id),
+      sorted
+    );
+    assert.ok(records.every((record, index) => record.tab.contents === contents[index]));
     assert.deepEqual(nativeChanges, []);
     assert.equal(ui.isFocused(), true);
     assert.ok(windows.every((window) => !window.isAlwaysOnTop()));
@@ -189,10 +228,10 @@ module.exports = async ({
       true
     );
     await fs.writeFile(path.join(out, 'ui.png'), (await ui.webContents.capturePage()).toPNG());
-    report.workPages = windows.map((window) => ({
-      url: window.webContents.getURL(),
-      visible: window.isVisible(),
-      opacity: window.getOpacity()
+    report.workPages = records.map((record) => ({
+      url: record.tab.contents.getURL(),
+      visible: !record.tab.hidden,
+      windowId: record.window.id
     }));
     report.pageLoads = readCounts;
     assert.equal(

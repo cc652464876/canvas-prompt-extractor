@@ -87,7 +87,12 @@
 }
 #save-prompts:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
 
+.download-rows { grid-column: 1; grid-row: 1; }
+.download-section > .download-context { grid-column: 1; grid-row: 2; margin-top: 0; }
+#download-attention { grid-column: 1 / -1; }
 .download-action {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-self: start;

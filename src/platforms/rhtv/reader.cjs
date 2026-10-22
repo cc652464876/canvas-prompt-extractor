@@ -124,7 +124,7 @@ function readCanvas() {
     mediaResources: {}
   };
 }
-function inspectWork() {
+function inspectWork(_platform, readPublished = null) {
   if (location.protocol === 'chrome-error:') return { pageError: true, resolvedUrl: location.href };
   const visible = (el) => Boolean(el && el.getClientRects().length);
   const body = document.body?.innerText || '';
@@ -136,6 +136,16 @@ function inspectWork() {
       /^(查看创作过程|查看制作过程)$/.test((b.innerText || b.textContent || '').trim())
   );
   return {
+    ...(readPublished
+      ? readPublished({
+          workId: location.pathname.match(/^\/projects\/canvas\/camp\/([^/]+)\/?$/)?.[1],
+          title: heading?.textContent.trim() || '',
+          heading,
+          detail: /^\/projects\/canvas\/camp\/[^/]+\/?$/.test(location.pathname),
+          process: Boolean(button),
+          login: /扫码登录|验证码登录|请输入手机号|登录后查看/.test(body)
+        })
+      : {}),
     title: canvas
       ? document.title.replace(/\s*[丨|]\s*RHTV.*$/i, '')
       : heading?.textContent.trim() || '',

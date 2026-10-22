@@ -27,7 +27,8 @@
     "verify:preservation": "node \"开发辅助/验收工具/verify-v12-preservation.cjs\"",
     "format:check": "prettier --config \"开发辅助/工具配置/.prettierrc.json\" --check \"src/**/*.{js,cjs}\" \"scripts/**/*.cjs\" \"开发辅助/验收工具/**/*.cjs\" \"开发辅助/测试代码/**/*.cjs\" \"开发辅助/工具配置/eslint.config.js\"",
     "verify:authors": "node \"开发辅助/验收工具/verify-authors.cjs\"",
-    "verify:authors-ui": "node \"开发辅助/验收工具/verify-authors-ui.cjs\""
+    "verify:authors-ui": "node \"开发辅助/验收工具/verify-authors-ui.cjs\"",
+    "verify:canvas-browser": "node scripts/start.cjs --verify-canvas-browser"
   },
   "productName": "自由画布提取",
   "devDependencies": {

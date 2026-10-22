@@ -124,22 +124,22 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
       }
     }
     check('Show/hide platform never hides or makes independent browsing windows transparent');
-    await generic.webContents.executeJavaScript(
+    const genericPage = generic.webContents;
+    await genericPage.executeJavaScript(
       "window.open('https://oauth.example.test/login');void 0",
       true
     );
-    await until(() => independentBrowser.windows.size === 10);
+    await until(() => generic.browserToolbar.tabs.size === 2);
+    assert.equal(independentBrowser.windows.size, 9);
     let popup;
     await until(() => {
-      popup = [...independentBrowser.windows.keys()].find((w) =>
-        w.webContents.getURL().includes('oauth.example.test')
-      );
-      return popup && !popup.webContents.isLoading();
+      popup = generic.webContents;
+      return popup.getURL().includes('oauth.example.test') && !popup.isLoading();
     });
-    assert.equal(popup.webContents.session, generic.webContents.session);
-    assert.equal(await popup.webContents.executeJavaScript('Boolean(window.opener)'), true);
-    assert.ok(popup.browserToolbar);
-    await generic.webContents.executeJavaScript(
+    assert.equal(popup.session, genericPage.session);
+    assert.equal(await popup.executeJavaScript('Boolean(window.opener)'), true);
+    assert.ok(generic.browserToolbar);
+    await genericPage.executeJavaScript(
       "location.href='https://www.douyin.com/user/browser-fixture';void 0"
     );
     await until(() =>
@@ -151,7 +151,7 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
       w.webContents.getURL().includes('/user/browser-fixture')
     );
     assert.equal(target.webContents.session, session.fromPartition('persist:social-douyin'));
-    assert.equal(generic.webContents.getURL(), 'https://example.org/');
+    assert.equal(genericPage.getURL(), 'https://example.org/');
     check(
       'OAuth popups retain opener and toolbar; platform links reuse the matching login session'
     );

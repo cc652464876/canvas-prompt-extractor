@@ -34,8 +34,25 @@ async function loadLocalProject(input) {
     throw error;
   }
   const directory = stat.isDirectory() ? target : path.dirname(target);
+  if (stat.isDirectory()) {
+    try {
+      await fs.access(path.join(directory, MANIFEST));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      try {
+        await fs.access(path.join(directory, '.项目索引.json'));
+      } catch (missing) {
+        if (missing.code === 'ENOENT')
+          throw new Error('项目文件夹中未找到 .画布项目.json 或 .项目索引.json。');
+        throw missing;
+      }
+      return require('./local-collection.cjs').loadLocalCollection(directory);
+    }
+  } else if (path.basename(target) === '.项目索引.json') {
+    return require('./local-collection.cjs').loadLocalCollection(directory);
+  }
   if (!stat.isDirectory() && (!stat.isFile() || path.basename(target) !== MANIFEST))
-    throw new Error('请选择 .画布项目.json 文件或它所在的项目文件夹。');
+    throw new Error('请选择 .画布项目.json、作者 .项目索引.json 或对应文件夹。');
   const manifestPath = path.join(directory, MANIFEST),
     store = new ProjectStore(path.dirname(directory));
   let result;
