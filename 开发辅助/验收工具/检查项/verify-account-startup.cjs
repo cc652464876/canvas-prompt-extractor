@@ -29,6 +29,7 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
     'jimeng',
     'rhtv',
     'tapnow',
+    'neowow',
     'social-xiaohongshu',
     'social-douyin',
     'social-bilibili',
@@ -46,7 +47,11 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
           )
       );
   try {
-    await until(() => run("document.querySelectorAll('#platform-shortcuts button').length===4"));
+    await until(() =>
+      run(
+        `document.querySelectorAll('#platform-shortcuts button').length===${listPlatforms().length}`
+      )
+    );
     assert.equal(accounts.entries.size, 0);
     assert.equal(independentBrowser.windows.size, 0);
     assert.equal(await run("document.querySelectorAll('header [id^=login-]').length"), 0);
@@ -61,10 +66,10 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
     const shortcutSizes = await run(
       `Array.from(document.querySelectorAll('#platform-shortcuts button,.social-login-actions button')).map(b=>{const r=b.getBoundingClientRect();return {text:b.textContent,width:r.width,height:r.height}})`
     );
-    assert.equal(shortcutSizes.length, 8);
+    assert.equal(shortcutSizes.length, listPlatforms().length + 4);
     assert.deepEqual(
-      shortcutSizes.slice(4).map((b) => b.text),
-      ['Midjourney登录', '小红书登录', '抖音登录', 'B站登录']
+      shortcutSizes.slice(listPlatforms().length).map((b) => b.text),
+      ['Midjourney', '小红书', '抖音', 'bilibili']
     );
     for (const button of shortcutSizes) {
       assert.ok(Math.abs(button.width - shortcutSizes[0].width) < 1);
@@ -91,7 +96,7 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
     ui.show();
     ui.focus();
     check(
-      'Eight equal-size shortcuts include Midjourney login before Xiaohongshu, sharing the built-in job browser session'
+      'Equal-size shortcuts include every registered platform and Midjourney before Xiaohongshu'
     );
     await run(
       "document.getElementById('browser-search').value='example.org';document.getElementById('browser-search').dispatchEvent(new Event('input',{bubbles:true}))"
@@ -130,7 +135,7 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
       assert.equal((await run('window.lab.login(' + JSON.stringify(id) + ')')).ok, true);
     for (const id of ['xiaohongshu', 'douyin', 'bilibili'])
       assert.equal((await run('window.lab.socialLogin(' + JSON.stringify(id) + ')')).ok, true);
-    await until(() => independentBrowser.windows.size === 9);
+    await until(() => independentBrowser.windows.size === partitions.length + 1);
     for (const id of partitions)
       assert.ok(
         [...independentBrowser.windows.values()].some((v) => v.partition === 'persist:' + id)
@@ -149,7 +154,7 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
     assert.equal(accounts.entries.size, 0);
     assert.ok(!getWindow());
     check(
-      'Seven site shortcuts reuse existing persistent sessions and preserve login after closing'
+      'Registered site shortcuts reuse existing persistent sessions and preserve login after closing'
     );
     for (const visible of [false, true, false]) {
       assert.equal((await run('window.lab.visible(' + visible + ')')).ok, true);
@@ -165,7 +170,7 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
       true
     );
     await until(() => generic.browserToolbar.tabs.size === 2);
-    assert.equal(independentBrowser.windows.size, 9);
+    assert.equal(independentBrowser.windows.size, partitions.length + 1);
     let popup;
     await until(() => {
       popup = generic.webContents;

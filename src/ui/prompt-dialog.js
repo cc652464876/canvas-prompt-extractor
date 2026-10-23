@@ -22,6 +22,7 @@ export function createPromptDialog({ getTypography }) {
   dialog.id = 'prompt-dialog';
   dialog.setAttribute('aria-label', '展开提示词');
   const controls = element('div', 'prompt-dialog-controls'),
+    modes = element('div', 'prompt-dialog-modes'),
     references = element('div', 'prompt-dialog-references'),
     content = element('div', 'prompt-text prompt-dialog-content'),
     closeButton = promptWindowButton(true);
@@ -63,7 +64,8 @@ export function createPromptDialog({ getTypography }) {
     }
   );
   controls.append(closeButton);
-  dialog.append(controls, references, content);
+  modes.hidden = true;
+  dialog.append(controls, modes, references, content);
   document.body.append(dialog);
   function restore() {
     const previous = current;
@@ -113,7 +115,7 @@ export function createPromptDialog({ getTypography }) {
     closeFor(owner) {
       if (current?.owner === owner) close();
     },
-    show({ owner, anchor, inner, scroll, strip, name }) {
+    show({ owner, anchor, inner, scroll, strip, name, modeControls }) {
       close();
       const slots = [];
       current = { owner, anchor, scroll, scrollTop: scroll.scrollTop, slots };
@@ -124,6 +126,8 @@ export function createPromptDialog({ getTypography }) {
         target.append(node);
       };
       if (strip && !strip.classList.contains('empty-references')) move(strip, references);
+      if (modeControls) move(modeControls, modes);
+      modes.hidden = !modeControls;
       references.hidden = !references.hasChildNodes();
       move(inner, content);
       dialog.setAttribute('aria-label', name + '的提示词');

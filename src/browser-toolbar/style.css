@@ -14,12 +14,12 @@
 .chrome-tabs .chrome-tab .chrome-tab-title,.chrome-tabs .chrome-tab[active] .chrome-tab-title{color:#000;line-height:16px}
 .tabstrip button{-webkit-app-region:no-drag}
 #tab-search{width:var(--tab-row-height);height:var(--tab-row-height);padding:0;border-radius:8px;background:#edf2fe;margin:var(--tab-row-top) 6px 0 0}#tab-search img{width:16px;height:16px}
-#tabs{flex:1;min-width:0;-webkit-app-region:drag}
+#tabs{flex:0 1 calc(var(--tab-count,1) * 239px + 25px);min-width:0;-webkit-app-region:drag}
 .chrome-tab,.chrome-tab *{-webkit-app-region:no-drag}
 .chrome-tabs[aria-disabled=true] .chrome-tab-content{pointer-events:none}
 .chrome-tabs .chrome-tab.loading .chrome-tab-favicon{animation:loading 1.2s linear infinite}
 @keyframes loading{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.chrome-tabs .chrome-tab.loading .chrome-tab-favicon{animation:none}}
-#new-tab{position:absolute;top:var(--tab-row-top);width:var(--tab-row-height);height:var(--tab-row-height);padding:0;border-radius:50%;display:grid;place-items:center;color:#5f6368;z-index:20}#new-tab img{display:none}#new-tab::before{content:"";display:block;width:16px;height:16px;background:currentColor;mask:url("icons/add.svg") center/contain no-repeat}#new-tab:hover:not(:disabled){background:#bdcceb}#new-tab:active:not(:disabled){background:#b1c3e3}.window-drag{flex:none;width:34px;height:100%}.native-controls-space{width:138px;height:100%;flex:none;pointer-events:none;-webkit-app-region:no-drag}
+#new-tab{position:relative;margin-top:var(--tab-row-top);flex:0 0 var(--tab-row-height);width:var(--tab-row-height);min-width:var(--tab-row-height);height:var(--tab-row-height);min-height:var(--tab-row-height);padding:0;border-radius:0;display:grid;place-items:center;color:#5f6368;z-index:20}#new-tab img{display:none}#new-tab::before{content:"";display:block;width:16px;height:16px;background:currentColor;mask:url("icons/add.svg") center/contain no-repeat}#new-tab:hover:not(:disabled){background:radial-gradient(circle closest-side,#bdcceb 99%,transparent)}#new-tab:active:not(:disabled){background:radial-gradient(circle closest-side,#b1c3e3 99%,transparent)}.window-drag{flex:1;min-width:6px;height:100%}.native-controls-space{width:138px;height:100%;flex:none;pointer-events:none;-webkit-app-region:no-drag}
 nav{height:var(--toolbar-height);position:relative;z-index:4;display:flex;align-items:center;gap:4px;padding:4px 6px 6px;background:var(--surface)}
 nav>button{flex:0 0 var(--control-height);width:var(--control-height);height:var(--control-height);border-radius:50%;padding:7px}nav>button img{width:20px;height:20px;opacity:.78}
 form{flex:1;min-width:0;height:var(--control-height);margin:0 0 0 5px;border-radius:20px;background:#ecebf0;display:flex;align-items:center;gap:8px;padding:0 12px}

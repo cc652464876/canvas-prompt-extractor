@@ -1,6 +1,6 @@
 {
   "name": "canvas-prompt-extractor",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
   "description": "自由画布提取：作者主页选集与多作品批量下载",
@@ -16,6 +16,7 @@
     "verify:live": "node scripts/start.cjs --verify-live",
     "verify:readers": "node \"开发辅助/验收工具/verify-reader-navigation.cjs\"",
     "verify:accounts": "node \"开发辅助/验收工具/verify-account-state.cjs\"",
+    "verify:neowow": "node \"开发辅助/验收工具/check-electron.cjs\" verify-neowow.cjs",
     "verify:account-startup": "node scripts/start.cjs --verify-account-startup",
     "verify:browser-reset": "node scripts/start.cjs --verify-browser-reset",
     "verify:local-project": "node scripts/start.cjs --verify-local-project",
@@ -41,5 +42,9 @@
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.17",
+    "markdown-it": "^15.0.3"
   }
 }

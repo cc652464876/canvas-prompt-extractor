@@ -136,6 +136,7 @@ class DownloadQueue {
     onProgress = () => {},
     onSettled = async () => {},
     onPrepare = async () => {},
+    catalog = null,
     concurrency = 2,
     interval = 1000,
     retryDelays = [5000, 15000],
@@ -147,6 +148,7 @@ class DownloadQueue {
       onProgress,
       onSettled,
       onPrepare,
+      catalog,
       concurrency,
       interval,
       retryDelays,
@@ -198,6 +200,11 @@ class DownloadQueue {
   }
   emit() {
     this.onProgress(this.summary());
+  }
+  prioritize(id) {
+    if (!this.active || this.cancelled || !this.prioritizeJob)
+      throw new Error('下载任务正在准备或已经结束，请稍后重试。');
+    return this.prioritizeJob(id);
   }
   pause() {
     this.paused = true;
@@ -365,6 +372,7 @@ class DownloadQueue {
   }
   async start(assets, kinds, retryOnly = false, force = false) {
     if (this.active) throw new Error('下载任务正在进行。');
+    const catalog = this.catalog || assets;
     this.selection = assets.filter((a) => kinds.includes(a.kind));
     this.active = true;
     this.paused = false;
@@ -400,11 +408,36 @@ class DownloadQueue {
       const ready = this.selection
         .filter((a) => a.url && a.state !== 'done' && (!retryOnly || a.state === 'failed'))
         .map((asset) => ({ asset, failures: 0 }));
+      const claimed = new Map();
+      this.prioritizeJob = (id) => {
+        const asset = catalog.find((a) => a.id === id);
+        if (!asset) throw new Error('此素材不在当前下载项目内，请结束当前任务后重试。');
+        if (asset.state === 'done') return { state: 'done' };
+        if (!asset.url) throw new Error('此素材尚无可下载地址。');
+        let job =
+          ready.find((job) => job.asset.id === id) ||
+          delayed.find((job) => job.asset.id === id) ||
+          claimed.get(id);
+        if (!job) {
+          job = { asset, failures: 0 };
+          ready.push(job);
+          if (!this.selection.some((a) => a.id === id)) this.selection.push(asset);
+        }
+        job.priority = true;
+        if (asset.state === 'failed' && claimed.has(id)) job.retryRequested = true;
+        ready.sort((a, b) => Number(Boolean(b.priority)) - Number(Boolean(a.priority)));
+        wake();
+        this.emit();
+        return { state: asset.state, prioritized: true, paused: this.paused };
+      };
       const promote = () => {
         const now = Date.now();
         for (let i = 0; i < delayed.length;) {
-          if (delayed[i].retryAt <= now) ready.push(delayed.splice(i, 1)[0]);
-          else i++;
+          if (delayed[i].retryAt <= now) {
+            const job = delayed.splice(i, 1)[0];
+            if (job.priority) ready.unshift(job);
+            else ready.push(job);
+          } else i++;
         }
       };
       const take = async () => {
@@ -420,7 +453,9 @@ class DownloadQueue {
           }
           if (ready.length) {
             inFlight++;
-            return ready.shift();
+            const job = ready.shift();
+            claimed.set(job.asset.id, job);
+            return job;
           }
           if (!delayed.length && !inFlight) return null;
           const due = delayed.length
@@ -451,7 +486,10 @@ class DownloadQueue {
               delayed.push(job);
             }
             await this.onSettled(job.asset);
+            if (job.retryRequested && job.asset.state === 'failed' && !this.cancelled)
+              ready.unshift({ asset: job.asset, failures: 0, priority: true });
           } finally {
+            claimed.delete(job.asset.id);
             inFlight--;
             wake();
           }
@@ -476,6 +514,7 @@ class DownloadQueue {
         }
       wake();
       this.wake = null;
+      this.prioritizeJob = null;
       this.active = false;
       this.emit();
       await this.onSettled(null);

@@ -14,8 +14,9 @@
 #reading-board:not([data-layout=side]) .citing-strip { grid-row: 7; }
 .reading-card.is-collapsed .citing-strip { display: none; }
 
-.linked-text { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 10px; }
-.linked-text summary { cursor: pointer; font-size: 14px; overflow-wrap: anywhere; }
+.linked-text { border-top: 1px solid var(--line); margin-top: 0; padding: 0; }
+.linked-text:not(.linked-text + .linked-text) { margin-top: 8px; }
+.linked-text summary { cursor: pointer; font-size: 12px; color: var(--muted); line-height: 20px; padding: 8px 0; overflow-wrap: anywhere; }
 .linked-text-body { padding-top: 8px; }
 .linked-text pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; margin: 8px 0; }
 .text-provenance { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 0 8px; }

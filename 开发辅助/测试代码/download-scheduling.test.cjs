@@ -269,3 +269,112 @@ test(
     assert.equal(q.active, false);
   }
 );
+
+test('Manual priority moves a queued image ahead without interrupting or duplicating active files', async (t) => {
+  const dir = await directory(t),
+    items = ['A', 'B', 'C', 'D'].map(asset),
+    calls = [];
+  let release, started;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const began = new Promise((resolve) => {
+    started = resolve;
+  });
+  const q = new DownloadQueue({
+    concurrency: 1,
+    interval: 0,
+    retryDelays: [],
+    filePath: (a) => path.join(dir, a.fileName),
+    fetcher: async (url) => {
+      const id = path.basename(new URL(url).pathname, '.png');
+      calls.push(id);
+      if (id === 'A') {
+        started();
+        await gate;
+      }
+      return image();
+    }
+  });
+  t.after(() => {
+    release();
+    q.cancel();
+  });
+  const task = q.start(items, ['image']);
+  await began;
+  q.prioritize('D');
+  q.prioritize('D');
+  q.prioritize('A');
+  assert.deepEqual(calls, ['A']);
+  assert.equal(q.summary().total, 4);
+  release();
+  assert.equal((await task).done, 4);
+  assert.deepEqual(calls, ['A', 'D', 'B', 'C']);
+});
+
+test('Manual downloads may join the current project queue but cannot cross projects or bypass pause/backoff', async (t) => {
+  const dir = await directory(t),
+    items = ['A', 'B', 'C'].map(asset),
+    calls = [];
+  let prioritySet = false;
+  const q = new DownloadQueue({
+    catalog: items,
+    concurrency: 1,
+    interval: 0,
+    retryDelays: [30],
+    filePath: (a) => path.join(dir, a.fileName),
+    fetcher: async (url) => {
+      const id = path.basename(new URL(url).pathname, '.png');
+      calls.push({ id, time: Date.now() });
+      if (calls.length === 1) throw new Error('Temporary failure');
+      return image();
+    },
+    onProgress: (s) => {
+      if (!prioritySet && s.files.some((a) => a.error?.startsWith('等待重试'))) {
+        prioritySet = true;
+        q.pause();
+        q.prioritize('A');
+        q.prioritize('C');
+        q.prioritize('C');
+      }
+    }
+  });
+  t.after(() => q.cancel());
+  const task = q.start(items.slice(0, 2), ['image']);
+  for (let i = 0; i < 100 && !prioritySet; i++) await sleep(2);
+  assert.equal(prioritySet, true);
+  assert.throws(() => q.prioritize('other-project'), /当前下载项目/);
+  assert.equal(q.summary().total, 3);
+  await sleep(50);
+  assert.equal(calls.length, 1);
+  q.resume();
+  assert.equal((await task).done, 3);
+  assert.deepEqual(
+    calls.map((c) => c.id),
+    ['A', 'A', 'C', 'B']
+  );
+  assert.ok(calls[1].time - calls[0].time >= 30);
+});
+
+test('An explicit retry during failed-file checkpointing is scheduled once after that attempt settles', async (t) => {
+  const dir = await directory(t),
+    item = asset('A');
+  let calls = 0,
+    requested = false;
+  const q = new DownloadQueue({
+    concurrency: 1,
+    interval: 0,
+    retryDelays: [],
+    filePath: (a) => path.join(dir, a.fileName),
+    fetcher: async () => (++calls === 1 ? new Response('', { status: 404 }) : image()),
+    onSettled: async (a) => {
+      if (a?.state === 'failed' && !requested) {
+        requested = true;
+        q.prioritize(a.id);
+        q.prioritize(a.id);
+      }
+    }
+  });
+  assert.equal((await q.start([item], ['image'])).done, 1);
+  assert.equal(calls, 2);
+});

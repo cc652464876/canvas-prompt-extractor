@@ -97,11 +97,11 @@ protocol.registerSchemesAsPrivileged([
   }
 ]);
 const ROOT = path.resolve(__dirname, '..');
-// v1.3 runs from source; each version owns its data directory.
+// v1.4 runs from source; each version owns its data directory.
 const DATA_ROOT = ROOT;
 // Chromium's HTTP User-Agent must stay ASCII; the native title is localized.
 app.setName('CanvasPromptExtractor');
-if (process.platform === 'win32') app.setAppUserModelId('com.freecanvas.extractor.v1_3');
+if (process.platform === 'win32') app.setAppUserModelId('com.freecanvas.extractor.v1_4');
 const verifyExtraction = process.argv.includes('--verify-extraction');
 const verifyThemes = process.argv.includes('--verify-themes');
 const verifyAccounts = process.argv.includes('--verify-account-startup');
@@ -919,6 +919,7 @@ function createQueue() {
     authorWorkIds = result.authorProfile?.loadedIds;
   const fetcher = createMediaFetcher({ session, metadata: result.metadata });
   return new DownloadQueue({
+    catalog: result.assets,
     fetcher,
     filePath: (a) => project.assetPath(a),
     onProgress: (progress) => {
@@ -989,7 +990,7 @@ if (ownsInstance)
         ? verificationPath(
             ROOT,
             process.argv.includes('--verify-authors')
-              ? 'v1.3/live-projects-' + Date.now()
+              ? 'v1.4/live-projects-' + Date.now()
               : 'projects'
           )
         : readOutputDirectory(
@@ -1010,7 +1011,7 @@ if (ownsInstance)
         minWidth: 680,
         minHeight: 620,
         show: !isolatedVerification,
-        title: transparentRendering ? '自由画布提取 · v1.3 · 透明读取试用' : '自由画布提取 · v1.3',
+        title: transparentRendering ? '自由画布提取 · v1.4 · 透明读取试用' : '自由画布提取 · v1.4',
         backgroundColor: uiTheme.tokens.bg,
         autoHideMenuBar: true,
         webPreferences: {
@@ -1040,6 +1041,7 @@ if (ownsInstance)
         independentBrowser.open(input);
         return true;
       });
+      handle('lab:browser-login-all', () => independentBrowser.openAll());
       handle('lab:social-profile-preference', async (enabled) => {
         if (typeof enabled !== 'boolean') throw new Error('无效的社交资料读取设置。');
         socialPreferenceWriteTail = socialPreferenceWriteTail
@@ -1239,12 +1241,19 @@ if (ownsInstance)
       });
       handle('lab:download', async (options) => {
         if (task || saveTask) throw new Error('请先结束读取或保存任务。');
-        if (queue?.active || downloadSetup) throw new Error('下载正在进行。');
+        if (downloadSetup) throw new Error('下载正在准备，请稍候。');
         if (exportOptions.mode !== 'full') throw new Error('请切换到全能模式。');
         const kinds = (options?.kinds || []).filter((k) => ['image', 'video', 'audio'].includes(k));
         if (!kinds.length) throw new Error('请至少选择一种素材类型。');
         if (!currentResult) throw new Error('请先读取画布。');
         const targets = selectDownloadAssets(currentResult.assets, options?.ids);
+        if (queue?.active) {
+          if (!options?.ids || options.force || options.retryOnly)
+            throw new Error('下载正在进行。');
+          if (!targets.every((a) => kinds.includes(a.kind)))
+            throw new Error('所选素材与下载类别不一致。');
+          return queue.prioritize(targets[0].id);
+        }
         downloadSetup = true;
         try {
           await ensureProject();

@@ -43,6 +43,7 @@ import { readerTarget, referencingEntries } from './reader-targets.js';
 import { promptReferenceLabel, promptReferenceTokens } from './prompt-display.js';
 import { createImageInfoDialog, createReaderImageInfo } from './image-info.js';
 import { createPromptDialog, promptWindowButton } from './prompt-dialog.js';
+import { createMarkdownText } from './markdown-text.js';
 const $ = (id) => document.getElementById(id);
 const imageInfoDialog = createImageInfoDialog();
 const promptDialog = createPromptDialog({ getTypography: () => promptTypography.get() });
@@ -109,6 +110,7 @@ function syncAuthorViews() {
   }
 }
 const loginBusy = new Set();
+let allWebsitesOpening = false;
 const accountControls = createAccountControls($('platform-shortcuts'), async (p) => {
   if (loginBusy.has(p)) return;
   loginBusy.add(p);
@@ -330,10 +332,13 @@ function updateButtons() {
     ? '当前项目已建立；下一个项目首次保存前可更换位置。'
     : '';
   $('visibility').disabled = browserResetting || localOpening;
-  accountControls.setLocked(browserResetting || localOpening, loginBusy);
+  accountControls.setLocked(browserResetting || localOpening || allWebsitesOpening, loginBusy);
+  $('browser-login-all').disabled =
+    browserResetting || localOpening || allWebsitesOpening || loginBusy.size > 0;
+  $('browser-login-all').setAttribute('aria-busy', String(allWebsitesOpening));
   $('browser-search').disabled = browserResetting || localOpening;
   for (const button of document.querySelectorAll('[data-social-login],[data-browser-login]'))
-    button.disabled = browserResetting || localOpening;
+    button.disabled = browserResetting || localOpening || allWebsitesOpening;
   for (const c of $('export-types').querySelectorAll('input')) c.disabled = locked;
   $('split').disabled = locked;
   for (const c of $('download-types').querySelectorAll('input')) c.disabled = locked;
@@ -381,7 +386,7 @@ function updateButtons() {
   $('open-local-project').setAttribute('aria-busy', String(localOpening));
   $('local-project-path').disabled = locked;
   const reset = $('browser-reset');
-  reset.disabled = locked || loginBusy.size > 0;
+  reset.disabled = locked || loginBusy.size > 0 || allWebsitesOpening;
   reset.textContent = browserResetting ? '正在重置…' : '清理缓存，恢复浏览器初始状态';
   reset.setAttribute('aria-busy', String(browserResetting));
   reset.title = reset.disabled && !browserResetting ? '请先结束当前任务，再重置浏览器。' : '';
@@ -1042,17 +1047,18 @@ function citingStrip(item, record) {
   };
   return strip;
 }
-function linkedTextBlock(ref, expanded) {
+function linkedTextBlock(ref, expanded, renderText) {
   const block = el('details', '', 'linked-text');
   block.open = expanded;
   block.dataset.nodeId = ref.nodeId;
   block.dataset.evidence = (ref.evidence || []).join(' ');
-  block.append(el('summary', '关联文本：' + ref.name));
+  block.append(
+    el('summary', '关联文本：' + ref.name + ' · ' + (ref.relation || '当前画布引用／连线'))
+  );
   const body = el('div', '', 'linked-text-body');
-  body.append(el('p', ref.relation || '当前画布引用／连线', 'text-provenance'));
   if (ref.textMismatch)
     body.append(el('p', '参数中的文本副本与当前节点正文不同；此处保留参数副本。', 'hint'));
-  if (ref.text?.trim()) body.append(el('pre', ref.text));
+  if (ref.text?.trim()) body.append(renderText(ref.text));
   else
     body.append(
       el(
@@ -1086,6 +1092,16 @@ function linkedTextBlock(ref, expanded) {
   return block;
 }
 function detail(item, record) {
+  const markdownViews = [];
+  const renderText = (source, entry = null) => {
+    const view = createMarkdownText(
+      source,
+      entry ? (text) => richPrompt({ ...entry, prompt: text }) : null
+    );
+    markdownViews.push(view);
+    view.setMode(record.markdownMode || 'preview');
+    return view.element;
+  };
   const isAsset = record.scope === 'assets',
     isText = !isAsset && item.kind === 'text',
     d = el('article', '', 'reading-card');
@@ -1105,6 +1121,44 @@ function detail(item, record) {
   d.append(content);
   const workTitle = item.workTitle || result?.metadata.title,
     promptHeading = el('div', '', 'prompt-heading');
+  const markdownModes = el('div', '', 'markdown-modes');
+  markdownModes.setAttribute('role', 'tablist');
+  markdownModes.setAttribute('aria-label', '正文显示方式');
+  for (const [value, label] of [
+    ['preview', 'Preview'],
+    ['markdown', 'Markdown']
+  ]) {
+    const button = action(label, () => {
+      record.markdownMode = value;
+      for (const view of markdownViews) view.setMode(value);
+      for (const tab of markdownModes.children) {
+        const selected = tab.dataset.mode === value;
+        tab.classList.toggle('active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      }
+    });
+    button.dataset.mode = value;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String((record.markdownMode || 'preview') === value));
+    button.tabIndex = (record.markdownMode || 'preview') === value ? 0 : -1;
+    button.classList.toggle('active', (record.markdownMode || 'preview') === value);
+    markdownModes.append(button);
+  }
+  markdownModes.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = [...markdownModes.children];
+    const index =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? 1
+          : (tabs.indexOf(document.activeElement) + 1) % tabs.length;
+    tabs[index].click();
+    tabs[index].focus();
+  });
+  promptHeading.append(markdownModes);
   if (workTitle) promptHeading.append(el('p', '所属作品：' + workTitle, 'work-source'));
   text.prepend(promptHeading);
   const head = el('div', '', 'detail-heading'),
@@ -1281,7 +1335,7 @@ function detail(item, record) {
       );
     for (const ref of item.associatedTexts || [])
       if (!record.nodeId || ref.targetNodeId === record.nodeId)
-        inner.append(linkedTextBlock(ref, true));
+        inner.append(linkedTextBlock(ref, true, renderText));
   } else {
     if (isText) {
       const count = (
@@ -1309,7 +1363,7 @@ function detail(item, record) {
       inner.append(el('p', '直接提示词', 'text-provenance'));
     inner.append(
       item.prompt.trim()
-        ? richPrompt(item)
+        ? renderText(item.prompt, item)
         : el(
             'p',
             isText
@@ -1320,7 +1374,8 @@ function detail(item, record) {
     );
     if (item.textState === 'partial')
       inner.append(el('p', '部分文本格式未解析，请核对平台原文。', 'hint'));
-    for (const ref of item.referenceTexts) inner.append(linkedTextBlock(ref, !item.prompt.trim()));
+    for (const ref of item.referenceTexts)
+      inner.append(linkedTextBlock(ref, !item.prompt.trim(), renderText));
   }
   if (outputs.some((asset) => asset.kind === 'image')) {
     record.imageInfo = createReaderImageInfo((visible) => {
@@ -1353,6 +1408,7 @@ function detail(item, record) {
       inner,
       scroll,
       strip: visual.querySelector('.ref-strip'),
+      modeControls: markdownModes,
       name: item.name
     })
   );
@@ -1524,6 +1580,7 @@ function refreshDownload() {
 }
 function showDownloads(d) {
   downloads = d;
+  imageInfoDialog.syncDownloads(d);
   refreshDownload();
   updateButtons();
   const message = d.paused
@@ -1680,6 +1737,7 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     result.assets = payload.map((asset) => Object.assign(assetMap.get(asset.id) || {}, asset));
     assetMap = new Map(result.assets.map((a) => [a.id, a]));
     prepareVideoThumbnails(result.assets, { full: onlinePreview() });
+    imageInfoDialog.syncAssets(result.assets);
     refreshDownload();
     updateButtons();
     if (!downloads?.active) {
@@ -1766,6 +1824,23 @@ $('social-profiles-enabled').addEventListener('change', async (event) => {
     $('social-profile-status').textContent = error.message;
   } finally {
     checkbox.disabled = false;
+  }
+});
+$('browser-login-all').addEventListener('click', async () => {
+  if (browserResetting || localOpening || allWebsitesOpening || loginBusy.size) return;
+  allWebsitesOpening = true;
+  updateButtons();
+  const notice = $('browser-access-status');
+  notice.textContent = '正在打开全部预设网站…';
+  try {
+    const response = await window.lab.loginAll();
+    if (!response.ok) throw new Error(response.error);
+    notice.textContent = '已在一个窗口中打开 ' + response.value.count + ' 个网站标签，可逐个登录。';
+  } catch (error) {
+    notice.textContent = error.message;
+  } finally {
+    allWebsitesOpening = false;
+    updateButtons();
   }
 });
 for (const button of document.querySelectorAll('[data-social-login],[data-browser-login]')) {
@@ -1961,7 +2036,15 @@ function setBrowserResetting(value) {
   updateButtons();
 }
 $('browser-reset').addEventListener('click', async () => {
-  if (browserResetting || busy || saving || downloads?.active || downloadStarting || loginBusy.size)
+  if (
+    browserResetting ||
+    busy ||
+    saving ||
+    downloads?.active ||
+    downloadStarting ||
+    loginBusy.size ||
+    allWebsitesOpening
+  )
     return;
   const settings = {};
   for (const key of ['appearance-v1', 'theme', 'prompt-typography-v1', 'columns', 'read-layout']) {

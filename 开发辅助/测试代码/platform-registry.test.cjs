@@ -94,7 +94,7 @@ test('A failing brand stays lazy and cannot prevent another brand from loading',
 test('URL/frame policies reject lookalike hosts, credentials, query-string host tricks and other brands', () => {
   assert.deepEqual(
     listPlatforms().map((p) => p.id),
-    ['liblib', 'jimeng', 'rhtv', 'tapnow']
+    ['liblib', 'jimeng', 'rhtv', 'tapnow', 'neowow']
   );
   assert.equal(resolvePlatform('https://www.liblib.tv/detail/1').platform, 'liblib');
   assert.equal(resolvePlatform('https://jimeng.jianying.com/s/a').platform, 'jimeng');

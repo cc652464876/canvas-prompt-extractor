@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('lab', {
   download: (options) => call('lab:download', options),
   downloadControl: (action) => call('lab:download-control', action),
   login: (platform) => call('lab:login', platform),
+  loginAll: () => call('lab:browser-login-all'),
   openBrowser: (input) => call('lab:browser-open', input),
   resetBrowser: (settings) => call('lab:reset-browser', settings),
   copyText: (text) => call('lab:copy-text', text),

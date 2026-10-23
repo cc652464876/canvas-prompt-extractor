@@ -261,6 +261,8 @@ function createExtractionService({
             token
           );
           if (work.pageError) throw pageLoadError(undefined, '浏览器错误页面');
+          if (work.accessError)
+            throw Object.assign(new Error(work.accessError), { code: 'PLATFORM_ACCESS_REQUIRED' });
           if (leftRequestedWork(work.resolvedUrl, url))
             throw Object.assign(
               new Error('平台页面已切换到其他作品。请重新点击“开始读取网页”打开原链接。'),
@@ -288,6 +290,7 @@ function createExtractionService({
             }
           } else unpublishedSince = 0;
           if (latest) {
+            if (!metadata.title && latest.canvasTitle) metadata.title = latest.canvasTitle;
             void extractionFeedback.set(
               '已进入画布，正在读取并确认数据…',
               'running',
@@ -322,6 +325,10 @@ function createExtractionService({
                 ')',
               token
             );
+            if (outcome.accessError)
+              throw Object.assign(new Error(outcome.accessError), {
+                code: 'PLATFORM_ACCESS_REQUIRED'
+              });
             if (outcome.closedLoginHint || outcome.closedPopup) {
               dismissedHints++;
               opened = false;
@@ -350,6 +357,7 @@ function createExtractionService({
             error.workChanged ||
             error.code === 'READ_DEADLINE' ||
             error.code === 'READ_CANCELLED' ||
+            error.code === 'PLATFORM_ACCESS_REQUIRED' ||
             error.code === 'PAGE_LOAD_FAILED'
           )
             throw error;

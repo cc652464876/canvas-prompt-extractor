@@ -28,14 +28,8 @@ async function act(action, value) {
 }
 
 function placeNewTabButton(tabs) {
-  const last = tabs.tabEls.at(-1);
-  const end = last
-    ? tabsElement.offsetLeft +
-      tabs.tabContentEl.offsetLeft +
-      tabs.tabPositions.at(-1) +
-      parseFloat(last.style.width)
-    : tabsElement.offsetLeft;
-  $('new-tab').style.left = Math.min(end, document.querySelector('.window-drag').offsetLeft) + 'px';
+  // Reserve a real flex slot for the button, outside all draggable tab regions.
+  tabsElement.style.setProperty('--tab-count', Math.max(1, tabs.tabEls.length));
 }
 
 // Keep upstream rendering/geometry/dragging intact. Only bridge mutations to
@@ -50,8 +44,8 @@ class BrowserChromeTabs extends window.ChromeTabs {
     void act('close-tab', tab.dataset.tabId);
   }
   layoutTabs() {
-    super.layoutTabs();
     placeNewTabButton(this);
+    super.layoutTabs();
   }
   setupDraggabilly() {
     super.setupDraggabilly();

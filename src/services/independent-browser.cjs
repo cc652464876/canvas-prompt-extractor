@@ -7,6 +7,7 @@ const hosts = {
   jimeng: ['jimeng.jianying.com'],
   rhtv: ['rhtv.runninghub.cn', 'runninghub.cn', 'www.runninghub.cn'],
   tapnow: ['app.tapnow.plus', 'tapnow.plus', 'www.tapnow.plus'],
+  neowow: ['neowow.cn', 'www.neowow.cn'],
   xiaohongshu: ['xiaohongshu.com', 'www.xiaohongshu.com', 'xhslink.com', 'www.xhslink.com'],
   douyin: ['douyin.com', 'www.douyin.com', 'v.douyin.com', 'iesdouyin.com', 'www.iesdouyin.com'],
   bilibili: ['bilibili.com', 'www.bilibili.com', 'space.bilibili.com', 'b23.tv']
@@ -33,13 +34,14 @@ class IndependentBrowser {
     Object.assign(this, { createWindow, icon, onOpen });
     this.windows = new Map();
   }
-  handoff(url, partition) {
+  handoff(url, partition, window = null) {
     const site = siteForUrl(url);
     if (!site || site.partition === partition) return false;
-    this.open(url);
+    if (window) this.openGroupedTab(window, url, site.partition, true);
+    else this.open(url);
     return true;
   }
-  create(url, partition, incoming = {}) {
+  create(url, partition, incoming = {}, grouped = false) {
     const win = this.createWindow(
       {
         ...incoming,
@@ -61,11 +63,18 @@ class IndependentBrowser {
       {
         homeUrl: siteForUrl(url)?.homeUrl || 'https://www.google.com/',
         manual: true,
-        onTabCreated: (tab, window) => this.configureContents(window, tab.contents, partition),
-        beforeNavigate: (address) => !this.handoff(address, partition)
+        initialTab: !grouped,
+        onTabCreated: (tab, window) =>
+          this.configureContents(window, tab.contents, tab.webPreferences?.partition || partition),
+        beforeNavigate: (address, window, tab) =>
+          !this.handoff(
+            address,
+            tab?.webPreferences?.partition || partition,
+            grouped ? window : null
+          )
       }
     );
-    this.windows.set(win, { partition, url });
+    this.windows.set(win, { partition, url, grouped });
     win.once('closed', () => this.windows.delete(win));
     // Lightweight service fixtures do not materialize WebContentsView tabs.
     if (!win.browserToolbar) this.configureContents(win, win.webContents, partition);
@@ -73,14 +82,16 @@ class IndependentBrowser {
     return win;
   }
   configureContents(win, wc, partition) {
+    const handoff = (url) =>
+      this.handoff(url, partition, this.windows.get(win)?.grouped ? win : null);
     wc.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     const guard = (event, address) => {
-      if (!isBrowserAddress(address) || this.handoff(address, partition)) event.preventDefault();
+      if (!isBrowserAddress(address) || handoff(address)) event.preventDefault();
     };
     wc.on('will-navigate', guard);
     wc.on('will-redirect', guard);
     wc.setWindowOpenHandler(({ url: address }) => {
-      if (!isBrowserAddress(address) || this.handoff(address, partition)) return { action: 'deny' };
+      if (!isBrowserAddress(address) || handoff(address)) return { action: 'deny' };
       return {
         action: 'allow',
         createWindow: (options) =>
@@ -88,7 +99,7 @@ class IndependentBrowser {
             ? win.browserToolbar.addTab({
                 url: address,
                 incoming: options.webContents,
-                webPreferences: options.webPreferences
+                webPreferences: { ...options.webPreferences, partition }
               }).contents
             : this.create(address, partition, options).webContents
       };
@@ -125,6 +136,41 @@ class IndependentBrowser {
   openSocial(platform) {
     if (!HOMES[platform]) throw new Error('不支持的社交平台。');
     return this.open(HOMES[platform], { partition: 'persist:social-' + platform });
+  }
+  openGroupedTab(win, url, partition, activate = false) {
+    const browser = win.browserToolbar;
+    const existing = [...browser.tabs.values()].find(
+      (tab) =>
+        tab.webPreferences?.partition === partition &&
+        (tab.presetUrl === url || (tab.contents?.getURL() || tab.url) === url)
+    );
+    if (existing) {
+      if (activate) browser.activate(existing.id);
+      return existing;
+    }
+    return browser.addTab({
+      url,
+      presetUrl: url,
+      homeUrl: url,
+      webPreferences: { partition },
+      activate
+    });
+  }
+  openAll() {
+    if (!this.groupWindow || this.groupWindow.isDestroyed())
+      this.groupWindow = this.create('https://www.google.com/', 'persist:browser', {}, true);
+    const win = this.groupWindow;
+    const sites = [
+      ...Object.entries(homeUrls()).map(([id, url]) => ({ url, partition: 'persist:' + id })),
+      { url: 'https://www.midjourney.com/', partition: 'persist:browser' },
+      ...Object.entries(HOMES).map(([id, url]) => ({ url, partition: 'persist:social-' + id }))
+    ];
+    const tabs = sites.map((site) => this.openGroupedTab(win, site.url, site.partition));
+    win.browserToolbar.activate(tabs[0].id);
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+    return { count: tabs.length };
   }
   dispose() {
     for (const win of this.windows.keys()) if (!win.isDestroyed()) win.destroy();

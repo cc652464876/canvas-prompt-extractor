@@ -144,6 +144,7 @@ const registry = createRegistry([
   { metadata: require('./liblib/metadata.cjs'), load: () => require('./liblib/index.cjs') },
   { metadata: require('./jimeng/metadata.cjs'), load: () => require('./jimeng/index.cjs') },
   { metadata: require('./rhtv/metadata.cjs'), load: () => require('./rhtv/index.cjs') },
-  { metadata: require('./tapnow/metadata.cjs'), load: () => require('./tapnow/index.cjs') }
+  { metadata: require('./tapnow/metadata.cjs'), load: () => require('./tapnow/index.cjs') },
+  { metadata: require('./neowow/metadata.cjs'), load: () => require('./neowow/index.cjs') }
 ]);
 module.exports = { ...registry, createRegistry, httpsUrl };

@@ -26,6 +26,31 @@
 }
 .prompt-heading > .work-source { flex: 1; min-width: 0; margin: 0; padding: 0; }
 .prompt-heading > .prompt-expand { margin-left: auto; }
+.markdown-modes { display: flex; align-items: center; gap: 2px; flex: none; white-space: normal; }
+.markdown-modes button { height: 22px; min-height: 22px; padding: 0 7px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font-size: 12px; line-height: 22px; }
+.markdown-modes button.active { color: var(--text); background: var(--soft); }
+.markdown-modes button:hover { color: var(--text); background: var(--soft); border: 0; text-decoration: none; }
+.prompt-text .markdown-content { white-space: normal; overflow-wrap: anywhere; }
+.markdown-content p { margin: 0 0 .75em; }
+.markdown-content > :last-child { margin-bottom: 0; }
+.markdown-content :is(h1,h2,h3,h4,h5,h6) { margin: 1em 0 .5em; font-weight: 600; line-height: 1.5; }
+.markdown-content > :first-child { margin-top: 0; }
+.markdown-content h1 { font-size: 1.5em; }
+.markdown-content h2 { font-size: 1.3em; }
+.markdown-content h3 { font-size: 1.15em; }
+.markdown-content :is(h4,h5,h6) { font-size: 1em; }
+.markdown-content :is(ul,ol) { margin: .5em 0; padding-left: 1.8em; }
+.markdown-content blockquote { margin: .75em 0; padding-left: 1em; border-left: 3px solid var(--line); color: var(--muted); }
+.markdown-content hr { border: 0; border-top: 1px solid var(--line); margin: 1em 0; }
+.markdown-content code { font-family: Consolas, 'Microsoft YaHei', monospace; background: var(--soft); border-radius: 3px; padding: 0 .2em; }
+.prompt-text .markdown-content pre { margin: .75em 0; padding: 10px; background: var(--soft); border-radius: 5px; white-space: pre; overflow: auto; }
+.markdown-content pre code { padding: 0; background: transparent; }
+.markdown-table-wrap { width: 100%; overflow-x: auto; margin: .75em 0; }
+.markdown-content table { border-collapse: collapse; width: 100%; min-width: 600px; font: inherit; }
+.markdown-content :is(th,td) { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; min-width: 60px; }
+.markdown-content th { font-weight: 600; background: var(--soft); }
+.prompt-text .markdown-source { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.prompt-dialog-modes { flex: none; padding: 0 28px; }
 
 .ref-strip { --reference-size: 68px; }
 .ref-strip .ref-thumb {
@@ -121,6 +146,7 @@
   scrollbar-gutter: stable;
 }
 #prompt-dialog .prompt-inner p { margin: 0; }
+#prompt-dialog .markdown-content p { margin: 0 0 .75em; }
 
 /* A manual popover places previews above modal dialogs in the browser top layer. */
 #hover-preview { inset: auto; margin: 0; }

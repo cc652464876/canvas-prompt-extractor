@@ -139,7 +139,13 @@ if (!process.versions.electron) {
             return { ok: false, error: e.message };
           }
         });
-      const run = (s) => win.webContents.executeJavaScript(s);
+      const run = async (s) => {
+        try {
+          return await win.webContents.executeJavaScript(s);
+        } catch (error) {
+          throw new Error(error.message + '\nScript: ' + s + '\nConsole: ' + errors.join('\n'));
+        }
+      };
       async function until(fn) {
         for (let i = 0; i < 200; i++) {
           if (await fn()) return;
@@ -388,8 +394,8 @@ if (!process.versions.electron) {
             scroll: downloadScroll.scrollTop,
             collapsed: downloadReaders[1].classList.contains('is-collapsed'),
             focused: downloadReaders[0].classList.contains('focused'),
-            saved: downloadReaders[0].querySelector('.state-tag').textContent,
-            locateHidden: downloadReaders[0].querySelector('.media-tools button').hidden
+            saved: downloadReaders[0].querySelector('.download-one').textContent,
+            locateHidden: downloadReaders[0].querySelector('.reader-locate').hidden
           })`);
           assert.equal(readingState.sameCards, true);
           assert.equal(readingState.sameImage, true);
@@ -399,7 +405,7 @@ if (!process.versions.electron) {
           assert.equal(readingState.locateHidden, state !== 'done');
           assert.equal(
             readingState.saved,
-            { downloading: '下载中', done: '已保存到本地', pending: '未保存到本地' }[state]
+            { downloading: '下载中', done: '已下载', pending: '下载素材' }[state]
           );
           assert.equal(publications, publishedBeforeDownloads);
         }

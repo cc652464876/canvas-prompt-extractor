@@ -10,7 +10,7 @@ function profileAddress(input) {
 }
 async function readProfile(input, fetcher, signal, onProgress, readPage) {
   const address = profileAddress(input);
-  if (!address) throw new Error('请输入 LibTV、TapNow 或即梦的有效作者主页地址。');
+  if (!address) throw new Error('请输入 LibTV、TapNow、即梦或 NeoWow 的有效作者主页地址。');
   return getAdapter(address.platform).profile.readProfile(
     input,
     (url, options) => fetcher(url, options, address.platform),

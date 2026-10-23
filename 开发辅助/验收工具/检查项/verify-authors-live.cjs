@@ -42,6 +42,7 @@ module.exports = async ({ ui, root, authorService, getResult, getStore, saveProm
   check('Real author address waits for a click and opens with all works selected');
   const works = authorService.snapshot().works.slice(0, 2);
   await run(`window.lab.selectWorks(${JSON.stringify(works.map((work) => work.id))})`);
+  await run('window.lab.readWorks()');
   const started = Date.now();
   while (authorService.reading) {
     if (Date.now() - started > 180000) throw new Error('Author work reads exceeded 180 seconds');

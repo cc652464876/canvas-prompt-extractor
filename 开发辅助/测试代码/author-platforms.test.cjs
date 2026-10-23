@@ -106,7 +106,11 @@ test('Known private LibTV works are ready for video download when listing comple
   for (let i = 0; service.reading && i < 100; i++) await new Promise((r) => setTimeout(r, 1));
   assert.equal(reads, 1);
 });
-test('Author routing supports three platforms, rejects credentials/lookalikes and leaves RHTV unsupported', () => {
+test('Author routing supports four platforms, rejects credentials/lookalikes and leaves RHTV unsupported', () => {
+  assert.equal(
+    profileAddress('https://neowow.cn/creator?userId=1988244264030547968').platform,
+    'neowow'
+  );
   assert.equal(profileAddress('https://jimeng.jianying.com/s/hBHP6B5pXik/').platform, 'jimeng');
   for (const invalid of [
     'https://jimeng.jianying.com.evil/s/hBHP6B5pXik/',
@@ -182,8 +186,8 @@ test('TapNow paginates by work ID, retains shared canvases, and rejects stalled 
     /分页没有推进/
   );
 });
-test('All four platforms preserve video-only results and explicit unavailable video states', () => {
-  for (const platform of ['liblib', 'jimeng', 'rhtv', 'tapnow']) {
+test('All five platforms preserve video-only results and explicit unavailable video states', () => {
+  for (const platform of ['liblib', 'jimeng', 'rhtv', 'tapnow', 'neowow']) {
     const r = publishedWork({
       platform,
       inputUrl: 'https://example.com/work/1',

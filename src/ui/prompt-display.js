@@ -19,6 +19,7 @@ export function promptReferenceTokens(entry, platform) {
   for (const match of prompt.matchAll(regex)) {
     let candidates;
     if (match[3]) candidates = refs.filter((r) => r.nodeId === match[3]);
+    else if (match[4] && rule.resolve) candidates = rule.resolve(match, refs);
     else if (match[4]) {
       const type = rule.type(match[4]),
         index = Number(match[5]);

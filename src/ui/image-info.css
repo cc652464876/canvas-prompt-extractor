@@ -16,6 +16,8 @@
 .image-info-more summary::marker{content:''}
 .image-info-more summary{display:flex;align-items:center;gap:16px;flex-wrap:wrap;width:fit-content;max-width:100%}
 .image-info-more summary>span{cursor:pointer}
+.image-info-panel .image-info-download{display:block;width:fit-content;margin-top:12px;font-size:13px;font-weight:400;line-height:1.8;color:var(--muted);height:auto;min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.image-info-panel .image-info-download:hover:not(:disabled){color:var(--text);background:transparent;border:0;text-decoration:none}
 .image-info-panel .image-info-open-job{font:inherit;color:inherit;height:auto;min-height:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .image-info-panel .image-info-open-job:hover:not(:disabled){color:var(--text);background:transparent;border:0;text-decoration:underline}
 .image-info-more .image-info-exiftool{font:12px/1.65 Consolas,'Microsoft YaHei',monospace;margin-top:10px;max-height:44vh;overflow:auto}

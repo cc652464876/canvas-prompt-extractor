@@ -146,15 +146,29 @@ function createImageInfoPanel({ inline = false, onVisibilityChange = () => {} } 
   const render = (value) => {
     body.replaceChildren();
     if (value.status === 'needs-download') {
-      const download = element('button', '下载图片', 'quiet');
+      const download = element('button', '下载图片', 'quiet image-info-download');
       download.type = 'button';
       download.addEventListener('click', async () => {
         const token = sequence;
+        download.disabled = true;
         try {
           const r = await window.lab.download({ ids: [current.id], kinds: ['image'] });
-          if (token === sequence) status(r.ok ? '已加入下载，完成后可重新读取。' : r.error);
+          if (token !== sequence) return;
+          if (!r.ok) throw new Error(r.error);
+          if (r.value?.state === 'done') {
+            void load();
+            return;
+          }
+          status(
+            r.value?.paused
+              ? '已优先排队；当前下载已暂停，继续下载后会自动读取。'
+              : '已优先排队，下载完成后自动读取图片信息。'
+          );
         } catch (error) {
-          if (token === sequence) status(error.message);
+          if (token === sequence) {
+            download.disabled = false;
+            status(error.message);
+          }
         }
       });
       body.append(element('p', '需先下载原图，才能读取图片内嵌的模型和提示词。'), download);
@@ -283,11 +297,41 @@ function createImageInfoPanel({ inline = false, onVisibilityChange = () => {} } 
   return {
     element: dialog,
     show(asset) {
-      current = asset;
+      current = { ...asset };
       file.textContent = asset.fileName || asset.name;
       file.title = file.textContent;
       if (!inline && !dialog.open) dialog.showModal();
       void load();
+    },
+    syncAssets(assets) {
+      if (inline || !current || !isOpen()) return;
+      const asset = assets.find((a) => a.id === current.id);
+      if (!asset) return;
+      const completed = asset.state === 'done' && current.state !== 'done';
+      current = { ...asset };
+      if (completed || (asset.state === 'done' && info?.status === 'needs-download')) {
+        file.textContent = asset.fileName || asset.name;
+        file.title = file.textContent;
+        void load();
+      }
+    },
+    syncDownloads({ files, cancelled, paused }) {
+      if (inline || !current || !isOpen() || info?.status !== 'needs-download') return;
+      const asset = files.find((a) => a.id === current.id);
+      if (!asset) return;
+      const download = body.querySelector('.image-info-download');
+      if (cancelled) {
+        if (download) download.disabled = false;
+        status('下载已取消，可重新下载图片。');
+      } else if (['failed', 'unavailable'].includes(asset.state)) {
+        if (download) download.disabled = false;
+        status('下载失败：' + (asset.error || '请重试。'));
+      } else if (paused) {
+        status('下载已暂停，继续下载后会自动读取。');
+      } else if (asset.state === 'downloading') {
+        if (download) download.disabled = true;
+        status('正在下载，完成后自动读取图片信息。');
+      }
     },
     setAsset(asset) {
       const nextKey = asset ? [asset.id, asset.state, asset.bytes].join(':') : '';
