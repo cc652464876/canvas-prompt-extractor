@@ -6,6 +6,8 @@ const test = require('node:test'),
 const { normalize } = require('../../src/normalize.cjs');
 const { ProjectStore, MANIFEST } = require('../../src/project-store.cjs');
 const { loadLocalProject, isCurrentProjectPath } = require('../../src/local-project.cjs');
+const { AuthorStore, namespaceResult, mergeResults } = require('../../src/author-library.cjs');
+const { manifestName, collectionName, projectFolderName } = require('../../src/project-files.cjs');
 async function fixture(t) {
   const root = path.resolve(__dirname, '../验收记录');
   await fs.mkdir(root, { recursive: true });
@@ -47,7 +49,7 @@ async function fixture(t) {
   a.state = 'done';
   a.bytes = 10;
   await store.checkpoint();
-  return { dir, store, manifest: path.join(store.directory, MANIFEST) };
+  return { dir, store, manifest: store.summary().manifestPath };
 }
 test('Directory, manifest and Windows Copy-as-path quotes load the same project without writes', async (t) => {
   const { store, manifest } = await fixture(t),
@@ -77,7 +79,9 @@ test('Current project recognition accepts directory, manifest, quotes and equiva
     manifest,
     ' "' + manifest + '" ',
     directory + path.sep,
-    path.join(directory, '.', MANIFEST)
+    path.join(directory, '.', MANIFEST),
+    path.join(directory, '打开画布_liblib_作者_作品.json'),
+    path.join(directory, '打开作品集_neowow_草帽小蔡.json')
   ])
     assert.equal(isCurrentProjectPath(input, directory), true);
   if (process.platform === 'win32') {
@@ -129,4 +133,135 @@ test('Invalid paths, missing manifests, damaged JSON, unsupported schema and mal
     await fs.writeFile(manifest, JSON.stringify(data));
     await assert.rejects(loadLocalProject(manifest));
   }
+});
+
+test('Named entry files and folders preserve titles, sanitize Windows names and provide author fallbacks', () => {
+  const metadata = { platform: 'liblib', author: '淞希', title: '《异种纪元》第五集' };
+  assert.equal(manifestName(metadata), '打开画布_liblib_淞希_《异种纪元》第五集.json');
+  assert.equal(projectFolderName(metadata), 'liblib_淞希_《异种纪元》第五集');
+  assert.equal(
+    collectionName({ platform: 'neowow', author: '草帽小蔡' }),
+    '打开作品集_neowow_草帽小蔡.json'
+  );
+  assert.equal(
+    manifestName({ platform: 'liblib', author: '', title: 'CON' }),
+    '打开画布_liblib_未知作者__CON.json'
+  );
+  assert.equal(
+    projectFolderName({ platform: 'neowow', author: '作者/甲', title: '影片:测试?. ' }),
+    'neowow_作者 甲_影片 测试'
+  );
+  assert.ok(
+    manifestName({ platform: 'liblib', author: '作'.repeat(300), title: '影'.repeat(300) }).length <
+      255
+  );
+});
+
+test('New projects write named manifests, read legacy records without changes, and reuse their assets on saving', async (t) => {
+  const { dir, store, manifest } = await fixture(t);
+  assert.equal(path.basename(manifest), '打开画布_liblib_测试_中文 空格.json');
+  const legacy = path.join(store.directory, MANIFEST);
+  await fs.rename(manifest, legacy);
+  const before = await fs.readFile(legacy, 'utf8');
+  for (const input of [legacy, store.directory]) {
+    const loaded = await loadLocalProject(input);
+    assert.equal(loaded.manifestPath, legacy);
+    assert.equal(loaded.result.assets[0].state, 'done');
+  }
+  assert.equal(await fs.readFile(legacy, 'utf8'), before);
+  const reopened = new ProjectStore(dir);
+  await reopened.create(structuredClone(store.result));
+  assert.equal(reopened.directory, store.directory);
+  assert.equal(reopened.result.assets[0].state, 'done');
+  assert.equal(
+    await fs.readFile(reopened.assetPath(reopened.result.assets[0]), 'utf8'),
+    'test-image'
+  );
+  assert.equal((await fs.readdir(store.directory)).includes(MANIFEST), false);
+  assert.equal((await loadLocalProject(manifest)).manifestPath, manifest);
+});
+
+test('An explicit named JSON selects its own record; ambiguous folders require a file selection', async (t) => {
+  const { store, manifest } = await fixture(t);
+  const second = path.join(store.directory, '打开画布_liblib_另一个作者_另一个作品.json');
+  const data = JSON.parse(await fs.readFile(manifest, 'utf8'));
+  data.result.metadata.title = '另一个作品';
+  await fs.writeFile(second, JSON.stringify(data));
+  await assert.rejects(loadLocalProject(store.directory), /多个打开入口/);
+  assert.equal((await loadLocalProject(manifest)).result.metadata.title, '中文 空格');
+  assert.equal((await loadLocalProject(second)).result.metadata.title, '另一个作品');
+});
+
+test('Named author collections reopen after relocation, keep duplicate titles isolated, and accept legacy mixed records', async (t) => {
+  const { dir, store } = await fixture(t);
+  const works = ['1', '2'].map((id) => ({
+    id,
+    title: '《浮光》第八集',
+    url: 'https://neowow.cn/work/' + id
+  }));
+  const profile = {
+    platform: 'neowow',
+    author: '草帽小蔡',
+    uuid: 'author',
+    url: 'https://neowow.cn/creator?userId=author',
+    works
+  };
+  const records = works.map((work) => {
+    const original = structuredClone(store.result);
+    Object.assign(original.metadata, {
+      platform: profile.platform,
+      author: profile.author,
+      title: work.title,
+      inputUrl: work.url
+    });
+    original.assets[0].state = 'pending';
+    return { work, result: namespaceResult(original, work) };
+  });
+  const aggregate = mergeResults(profile, new Map(records.map((r) => [r.work.id, r.result])), [
+    '1',
+    '2'
+  ]);
+  const author = new AuthorStore(path.join(dir, 'library'), profile, aggregate, records);
+  await author.prepare();
+  const entry = collectionName(profile);
+  const index = JSON.parse(await fs.readFile(path.join(author.directory, entry), 'utf8'));
+  assert.equal((await fs.readdir(author.directory)).includes('.项目索引.json'), false);
+  assert.equal(path.basename(records[0].store.directory), 'neowow_草帽小蔡_《浮光》第八集');
+  assert.match(
+    path.basename(records[1].store.directory),
+    /^neowow_草帽小蔡_《浮光》第八集_[a-f0-9]{8}$/
+  );
+  assert.deepEqual(
+    Object.values(index),
+    records.map((r) => path.basename(r.store.directory))
+  );
+  for (const record of records) {
+    await fs.writeFile(record.store.assetPath(record.result.assets[0]), 'test-image');
+    record.result.assets[0].state = 'done';
+    await record.store.checkpoint();
+  }
+  const moved = path.join(dir, '移动后的作品集');
+  await fs.rename(author.directory, moved);
+  for (const input of [moved, path.join(moved, entry), '"' + path.join(moved, entry) + '"']) {
+    const loaded = await loadLocalProject(input);
+    assert.equal(loaded.manifestPath, path.join(moved, entry));
+    assert.equal(loaded.records.size, 2);
+    assert.deepEqual(
+      loaded.profile.works.map((w) => w.id),
+      ['1', '2']
+    );
+    for (const record of loaded.records.values()) {
+      assert.equal(record.result.assets[0].state, 'done');
+      assert.equal(
+        await fs.readFile(record.store.assetPath(record.result.assets[0]), 'utf8'),
+        'test-image'
+      );
+    }
+  }
+  const folder = path.join(moved, path.basename(records[0].store.directory));
+  await fs.rename(path.join(folder, records[0].store.manifestName), path.join(folder, MANIFEST));
+  await fs.rename(path.join(moved, entry), path.join(moved, '.项目索引.json'));
+  const legacy = await loadLocalProject(moved);
+  assert.equal(legacy.records.size, 2);
+  assert.equal(legacy.manifestPath, path.join(moved, '.项目索引.json'));
 });

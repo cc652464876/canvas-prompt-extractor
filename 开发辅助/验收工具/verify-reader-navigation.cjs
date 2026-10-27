@@ -162,7 +162,9 @@ if (!process.versions.electron) {
       await click('[data-key="assets:a66"] .card-heading');
       assert.equal(await count(), 1);
       assert.equal(
-        await run(`document.querySelector('.prompt-inner > div:first-child').textContent`),
+        await run(
+          `document.querySelector('.prompt-inner > div:first-child').textContent.trimEnd()`
+        ),
         '素材自身提示词'
       );
       assert.equal(await run(`document.querySelector('.asset-info')`), null);
@@ -258,7 +260,7 @@ if (!process.versions.electron) {
       await click('#media-dialog-reader');
       assert.equal(
         await run(
-          `document.querySelector('.reading-card.focused .prompt-inner > div:first-child').textContent`
+          `document.querySelector('.reading-card.focused .prompt-inner > div:first-child').textContent.trimEnd()`
         ),
         'A 提示词'
       );
@@ -276,7 +278,7 @@ if (!process.versions.electron) {
       await click('#media-dialog-reader');
       assert.equal(
         await run(
-          `document.querySelector('.reading-card.focused .prompt-inner > div:first-child').textContent`
+          `document.querySelector('.reading-card.focused .prompt-inner > div:first-child').textContent.trimEnd()`
         ),
         'B 提示词'
       );
@@ -297,7 +299,7 @@ if (!process.versions.electron) {
         2
       );
       assert.equal(
-        await run(`document.querySelector('#prompt-dialog .prompt-inner').textContent`),
+        await run(`document.querySelector('#prompt-dialog .prompt-inner').textContent.trimEnd()`),
         '同名节点'
       );
       assert.equal(await run(`document.querySelectorAll('#prompt-dialog .ref-thumb').length`), 1);
@@ -378,7 +380,7 @@ if (!process.versions.electron) {
       assert.equal(await run(`document.getElementById('prompt-dialog').open`), false);
       assert.equal(
         await run(
-          `document.querySelector('[data-key="prompts:bConsumer"] .prompt-inner').textContent`
+          `document.querySelector('[data-key="prompts:bConsumer"] .prompt-inner').textContent.trimEnd()`
         ),
         '同名节点'
       );
@@ -699,6 +701,15 @@ if (!process.versions.electron) {
       check(
         'RHTV numbered image/audio mentions share LibTV thumbnails, hover preview and exact media navigation; unbound text and raw prompt remain intact'
       );
+      await require('./检查项/verify-markdown-references.cjs')({
+        ui,
+        run,
+        click,
+        until,
+        entry,
+        asset,
+        check
+      });
       assert.deepEqual(errors, []);
       await fs.writeFile(
         verificationPath(root, 'reader-navigation-report.json'),

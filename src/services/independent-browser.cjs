@@ -12,6 +12,48 @@ const hosts = {
   douyin: ['douyin.com', 'www.douyin.com', 'v.douyin.com', 'iesdouyin.com', 'www.iesdouyin.com'],
   bilibili: ['bilibili.com', 'www.bilibili.com', 'space.bilibili.com', 'b23.tv']
 };
+const GOOGLE_LOGIN = 'https://accounts.google.com/';
+const googleSessions = new WeakSet();
+function isGoogleLogin(url) {
+  try {
+    const host = new URL(url).hostname;
+    return host === 'google.com' || host.endsWith('.google.com') || host === 'accounts.youtube.com';
+  } catch {
+    return false;
+  }
+}
+function browserUserAgent(value) {
+  return String(value || '')
+    .replace(/\sElectron\/\S+/gi, '')
+    .trim();
+}
+function prepareGoogleHeaders(sess) {
+  if (!sess?.webRequest || googleSessions.has(sess)) return;
+  googleSessions.add(sess);
+  sess.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.google.com/*', '*://google.com/*', '*://accounts.youtube.com/*'] },
+    (details, callback) => {
+      const headers = details.requestHeaders;
+      for (const key of Object.keys(headers)) {
+        const name = key.toLowerCase();
+        if (name === 'user-agent') headers[key] = browserUserAgent(headers[key]);
+        else if (name.startsWith('sec-ch-ua'))
+          headers[key] = String(headers[key])
+            .replace(/,?\s*"Electron";v="[^"]*"/gi, '')
+            .replace(/,\s*,/g, ',')
+            .replace(/^,\s*/, '');
+      }
+      callback({ requestHeaders: headers });
+    }
+  );
+}
+function useBrowserUserAgent(contents) {
+  if (!contents || typeof contents.getUserAgent !== 'function') return;
+  const next = browserUserAgent(contents.getUserAgent());
+  if (next && next !== contents.getUserAgent() && typeof contents.setUserAgent === 'function')
+    contents.setUserAgent(next);
+  prepareGoogleHeaders(contents.session);
+}
 function siteForUrl(url) {
   let host;
   try {
@@ -85,7 +127,15 @@ class IndependentBrowser {
     const handoff = (url) =>
       this.handoff(url, partition, this.windows.get(win)?.grouped ? win : null);
     wc.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    if (typeof wc.loadURL === 'function') {
+      const loadURL = wc.loadURL.bind(wc);
+      wc.loadURL = (address, options) => {
+        if (isGoogleLogin(address)) useBrowserUserAgent(wc);
+        return loadURL(address, options);
+      };
+    }
     const guard = (event, address) => {
+      if (isGoogleLogin(address)) useBrowserUserAgent(wc);
       if (!isBrowserAddress(address) || handoff(address)) event.preventDefault();
     };
     wc.on('will-navigate', guard);
@@ -94,14 +144,17 @@ class IndependentBrowser {
       if (!isBrowserAddress(address) || handoff(address)) return { action: 'deny' };
       return {
         action: 'allow',
-        createWindow: (options) =>
-          win.browserToolbar
+        createWindow: (options) => {
+          const contents = win.browserToolbar
             ? win.browserToolbar.addTab({
                 url: address,
                 incoming: options.webContents,
                 webPreferences: { ...options.webPreferences, partition }
               }).contents
-            : this.create(address, partition, options).webContents
+            : this.create(address, partition, options).webContents;
+          if (isGoogleLogin(address)) useBrowserUserAgent(contents);
+          return contents;
+        }
       };
     });
   }
@@ -163,7 +216,8 @@ class IndependentBrowser {
     const sites = [
       ...Object.entries(homeUrls()).map(([id, url]) => ({ url, partition: 'persist:' + id })),
       { url: 'https://www.midjourney.com/', partition: 'persist:browser' },
-      ...Object.entries(HOMES).map(([id, url]) => ({ url, partition: 'persist:social-' + id }))
+      ...Object.entries(HOMES).map(([id, url]) => ({ url, partition: 'persist:social-' + id })),
+      { url: GOOGLE_LOGIN, partition: 'persist:browser' }
     ];
     const tabs = sites.map((site) => this.openGroupedTab(win, site.url, site.partition));
     win.browserToolbar.activate(tabs[0].id);
@@ -177,4 +231,4 @@ class IndependentBrowser {
     this.windows.clear();
   }
 }
-module.exports = { IndependentBrowser, siteForUrl };
+module.exports = { IndependentBrowser, siteForUrl, browserUserAgent, isGoogleLogin, GOOGLE_LOGIN };

@@ -2,6 +2,7 @@
 const { resolveTheme } = require('./theme.cjs');
 const { APP_ICON } = require('./app-paths.cjs');
 const { isTransparentRead } = require('./platform-presentation.cjs');
+const { holdPageAudio, syncPageAudio } = require('./page-audio.cjs');
 const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
@@ -129,7 +130,7 @@ class ExtractionFeedback {
     this.wc = webContents;
     this.id = randomUUID();
     this.theme = resolveTheme(theme, nativeTheme.shouldUseDarkColors);
-    this.previousMuted = this.wc.isAudioMuted();
+    this.releaseAudio = holdPageAudio(this.wc);
     this.active = true;
     this.closed = false;
     this.ready = false;
@@ -210,7 +211,7 @@ class ExtractionFeedback {
       void this.dispose();
     });
     // Normal mouse input for the whole panel; no click-through configuration.
-    this.wc.setAudioMuted(true);
+    syncPageAudio(this.wc);
     void this.updateMedia();
   }
   async initialize() {
@@ -340,7 +341,7 @@ class ExtractionFeedback {
             active: this.active,
             expiresAt: Date.now() + this.frameTimeoutMs
           };
-          if (this.active) this.wc.setAudioMuted(true);
+          if (this.active) syncPageAudio(this.wc);
           const main = this.wc.mainFrame;
           await Promise.allSettled(
             main.framesInSubtree.map((frame) => {
@@ -370,8 +371,8 @@ class ExtractionFeedback {
     this.wc.removeListener('did-frame-finish-load', this.onReady);
   }
   restoreAudio() {
-    if (!this.audioRestored && !this.wc.isDestroyed()) {
-      this.wc.setAudioMuted(this.previousMuted);
+    if (!this.audioRestored) {
+      this.releaseAudio();
       this.audioRestored = true;
     }
   }

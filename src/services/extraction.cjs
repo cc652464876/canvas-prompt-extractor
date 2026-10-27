@@ -11,6 +11,7 @@ const { loadWork, watchPageFailures, pageLoadError } = require('../page-navigati
 const { reuseWorkPage, reusableDocument } = require('../read-policy.cjs');
 const { leftRequestedWork } = require('../extraction-policy.cjs');
 const { ExtractionFeedback } = require('../extraction-feedback.cjs');
+const { holdPageAudio } = require('../page-audio.cjs');
 const { getAdapter, resolvePlatform, matchesFrame } = require('../platforms/registry.cjs');
 const { snapshotSignature } = require('./snapshot-stability.cjs');
 const { beginTransparentRead, endTransparentRead } = require('../platform-presentation.cjs');
@@ -98,15 +99,19 @@ function createExtractionService({
     const { platform, url } = resolvePlatform(input);
     const adapter = getAdapter(platform);
     adapter.validateWorkUrl?.(url);
-    let reuseCurrent = reuseWorkPage({
-      requestedUrl: url,
-      platform,
-      attempt: lastAttemptWork,
-      windowUrl:
-        platformWindow && !platformWindow.isDestroyed() ? platformWindow.webContents.getURL() : '',
-      windowPlatform: currentPlatform,
-      windowAvailable: Boolean(platformWindow && !platformWindow.isDestroyed())
-    });
+    let reuseCurrent =
+      !options.forceRead &&
+      reuseWorkPage({
+        requestedUrl: url,
+        platform,
+        attempt: lastAttemptWork,
+        windowUrl:
+          platformWindow && !platformWindow.isDestroyed()
+            ? platformWindow.webContents.getURL()
+            : '',
+        windowPlatform: currentPlatform,
+        windowAvailable: Boolean(platformWindow && !platformWindow.isDestroyed())
+      });
     const reuseMetadata =
       reuseCurrent && lastWorkMetadata?.inputUrl === url ? lastWorkMetadata : null;
     const token = scope.begin(platform, url);
@@ -139,15 +144,17 @@ function createExtractionService({
     try {
       await extractionFeedback?.dispose();
       window = getPlatformWindow(platform, Boolean(options.visible) || needsVisibleLoad, true, url);
+      token.window = window;
+      // Pin and mute before presentation, navigation or asynchronous setup.
+      // The window getter follows the active tab; the task must keep its page.
+      token.contents = window.webContents;
+      token.releaseAudio = holdPageAudio(token.contents);
+      window.browserToolbar?.syncAudio?.();
       if (presentWindow) presentWindow(window);
       else {
         if (!options.visible && !needsVisibleLoad) window.hide();
         if (transparentRead) beginTransparentRead(window);
       }
-      token.window = window;
-      // Pin the task to its own page. The native window's webContents getter
-      // follows the active tab and must never redirect a running extraction.
-      token.contents = window.webContents;
       reuseCurrent =
         reuseCurrent &&
         reuseWorkPage({
@@ -433,16 +440,17 @@ function createExtractionService({
                 }
               : null
           );
-        for (const child of token.childAudio)
-          if (!child.wc.isDestroyed()) child.wc.setAudioMuted(child.muted);
       } finally {
+        token.navigation?.dispose();
+        scope.finish(token);
+        if (getState().task === token) updateState({ task: null });
+        token.releaseAudio?.();
+        for (const child of token.childAudio) child.release();
         if (presentWindow && window) presentWindow(window);
         else if (transparentRead && window) endTransparentRead(window);
         if (!presentWindow)
           for (const child of token.transparentChildren || []) endTransparentRead(child);
-        token.navigation?.dispose();
-        scope.finish(token);
-        if (getState().task === token) updateState({ task: null });
+        window?.browserToolbar?.syncAudio?.();
       }
     }
   }

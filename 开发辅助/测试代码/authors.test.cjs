@@ -10,6 +10,12 @@ const { createAuthorService } = require('../../src/services/author.cjs');
 const { validateProjectRecord } = require('../../src/core/project-schema.cjs');
 const { DownloadQueue } = require('../../src/download-queue.cjs');
 const { SessionWorkCache } = require('../../src/session-work-cache.cjs');
+async function waitForReads(service) {
+  const deadline = Date.now() + 3000;
+  while (service.reading && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.equal(service.reading, false);
+}
 const uuid = 'a'.repeat(32),
   profileUrl = 'https://liblib.tv/profile?uuid=' + uuid;
 const work = (n, title = '作品 ' + n) => ({
@@ -162,9 +168,9 @@ test('Batch saving and downloading preserve per-work folders, duplicate assets a
   const store = new AuthorStore(root, p, merged, records);
   store.options = { kinds: ['image'], split: true, mode: 'full' };
   await store.prepare();
-  assert.equal(path.basename(store.directory), 'liblib_测试作者');
-  assert.equal(path.basename(records[0].store.directory), '同名作品');
-  assert.match(path.basename(records[1].store.directory), /^同名作品_/);
+  assert.equal(path.basename(store.directory), 'liblib_测试作者_' + p.uuid);
+  assert.equal(path.basename(records[0].store.directory), 'liblib_测试作者_同名作品');
+  assert.match(path.basename(records[1].store.directory), /^liblib_测试作者_同名作品_/);
   const saved = await store.save(false, { cancelled: false });
   assert.equal(saved.savedDocuments.length, 2);
   let requests = 0;
@@ -193,9 +199,7 @@ test('Batch saving and downloading preserve per-work folders, duplicate assets a
   assert.equal(queue.summary().total, 2);
   for (const r of records) {
     assert.equal((await fs.stat(r.store.assetPath(r.result.assets[0]))).size, png.length);
-    const manifest = JSON.parse(
-      await fs.readFile(path.join(r.store.directory, '.画布项目.json'), 'utf8')
-    );
+    const manifest = JSON.parse(await fs.readFile(r.store.summary().manifestPath, 'utf8'));
     validateProjectRecord(manifest);
   }
   const again = new AuthorStore(root, p, merged, records);
@@ -240,12 +244,12 @@ test('Rapid selection changes ignore cancelled-work data and reuse completed rea
   service.start();
   service.select([b.id]);
   resolveA();
-  for (let i = 0; i < 20 && service.reading; i++) await new Promise((r) => setImmediate(r));
+  await waitForReads(service);
   assert.deepEqual(last.authorProfile.selectedIds, [b.id]);
   assert.equal(calls, 1);
   assert.equal(last.assets.length, 0);
   service.start();
-  for (let i = 0; i < 20 && service.reading; i++) await new Promise((r) => setImmediate(r));
+  await waitForReads(service);
   assert.equal(last.assets.length, 1);
   assert.equal(last.assets[0].workId, b.id);
   service.select([]);
@@ -290,12 +294,12 @@ test('Stopping a collection stops pending works too, and explicit retry resumes 
   service.select([a.id, b.id]);
   service.start();
   service.stop();
-  for (let i = 0; i < 20 && service.reading; i++) await new Promise((r) => setImmediate(r));
+  await waitForReads(service);
   assert.equal(calls, 1);
   assert.equal(last.authorProfile.pending, 0);
   assert.ok(service.snapshot().works.every((w) => w.state === 'error'));
   service.retry(b.id);
-  for (let i = 0; i < 20 && service.reading; i++) await new Promise((r) => setImmediate(r));
+  await waitForReads(service);
   assert.equal(calls, 2);
   assert.deepEqual(last.authorProfile.loadedIds, [b.id]);
 });

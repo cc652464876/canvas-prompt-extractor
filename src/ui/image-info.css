@@ -3,7 +3,7 @@
 .image-info-file{min-width:0;flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .image-info-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex:none}
 .image-info-panel .image-info-actions button{font-size:12px;font-weight:400;min-height:30px;height:30px;padding:0 6px;border:0;border-radius:0;background:transparent;box-shadow:none}
-.image-info-panel .image-info-actions button:hover:not(:disabled){background:var(--soft);border:0}
+.image-info-panel .image-info-actions button:hover:not(:disabled){background:transparent;border:0;box-shadow:none;color:var(--accent);text-decoration:none}
 .image-info-panel p{margin:0}
 .image-info-body{font-size:14px;line-height:1.8}
 .image-info-body pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:inherit;margin:0;user-select:text}
@@ -25,8 +25,10 @@
 .media-tool-actions{display:flex;align-items:center;gap:4px}
 @media(max-width:650px){.image-info-heading{flex-wrap:wrap;gap:6px}.image-info-file{flex-basis:100%}.image-info-actions{margin-left:auto}.image-info-dialog{padding:12px 14px}}
 .detail-actions.has-file-location{grid-template-columns:repeat(5,78px)}
-.preview-file-state{align-self:center;font-size:12px;color:var(--muted)}
-.preview-actions .preview-locate{font-size:12px;padding:0 6px;border:0;background:transparent;box-shadow:none}
+#media-dialog .preview-actions{align-items:center;gap:4px}
+#media-dialog .preview-actions>button,#media-dialog .preview-file-state{display:inline-flex;align-items:center;justify-content:center;height:var(--control-height);min-height:var(--control-height);padding:0 6px;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:12px;font-weight:400;line-height:1.4;color:var(--text)}
+#media-dialog .preview-file-state{color:var(--muted)}
+#media-dialog .preview-actions>button:hover:not(:disabled){border:0;background:transparent;box-shadow:none;color:var(--accent);text-decoration:none}
 .media-stage>.magnify{font-size:12px;height:30px;min-height:30px;padding:0 6px;border:0;border-radius:0;background:transparent;color:var(--media-text);box-shadow:none}
 .media-stage>.magnify:hover:not(:disabled),.media-stage>.magnify.active{border:0;background:transparent;color:var(--media-text);text-decoration:underline}
 @media(max-width:950px){.detail-actions.has-file-location{grid-template-columns:repeat(5,74px)}}

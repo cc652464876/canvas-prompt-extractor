@@ -30,3 +30,9 @@ input[type=checkbox]{width:var(--checkbox-size);height:var(--checkbox-size)}
 .reading-card .reading-content{padding:0 12px 12px}
 .reading-card.is-collapsed{height:auto;min-height:0}
 #reading-board .reading-card.is-collapsed .reading-content{display:none!important}
+
+/* Thumbnail cards divide the area below the cover into two equal, compact rows. */
+.content-grid:not([data-text=true]) .content-card{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr 1fr;gap:0}
+.content-grid:not([data-text=true]) .card-body{padding-top:6px;padding-bottom:6px;align-content:center}
+.content-grid:not([data-text=true]) .card-heading{height:auto;min-height:0;line-height:1.65}
+.content-grid:not([data-text=true]) .card-footer{margin-top:0;padding-top:6px;padding-bottom:6px;min-height:32px}

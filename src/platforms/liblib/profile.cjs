@@ -110,4 +110,27 @@ async function readProfile(input, fetcher, signal, onProgress = () => {}) {
   if (!author) throw new Error('未读到作者信息，请检查主页地址。');
   return { platform: 'liblib', ...address, author, avatar, authorInfo, works, selectedIds: [] };
 }
-module.exports = { profileAddress, readProfile };
+async function readCount(input, fetcher, signal) {
+  const address = profileAddress(input);
+  if (!address) throw new Error('LibTV 作者主页地址无效。');
+  const response = await fetcher('https://api.liblib.tv/api/canvas/project/template/list', {
+    method: 'POST',
+    credentials: 'include',
+    redirect: 'error',
+    headers: { 'Content-Type': 'application/json', Referer: 'https://www.liblib.tv/' },
+    body: JSON.stringify({ page: 1, pageSize: 1, uuid: address.uuid, status: null, type: 0 }),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15000)])
+  });
+  if (!response.ok) throw new Error('作者作品数量检查失败（HTTP ' + response.status + '）。');
+  const value = await response.json();
+  const total = value.data?.total;
+  if (
+    value.code !== 0 ||
+    total == null ||
+    !Number.isSafeInteger(Number(total)) ||
+    Number(total) < 0
+  )
+    throw new Error('平台未返回可靠的作者作品总数。');
+  return Number(total);
+}
+module.exports = { profileAddress, readProfile, readCount };

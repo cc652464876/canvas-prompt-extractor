@@ -132,7 +132,7 @@ test('Connected texts are preserved without inventing prompts, and shared text i
   assert.ok(!doc.includes('作者说明'));
   assert.ok(!doc.includes('!['));
 });
-test('Auto save, category change, historical copy, local reload, and reuse of completed assets', async (t) => {
+test('Auto save and category changes update documents without historical copies and reuse completed assets', async (t) => {
   const dir = await temp(t),
     r = normalize(
       snap([
@@ -158,8 +158,11 @@ test('Auto save, category change, historical copy, local reload, and reuse of co
   );
   store.options.split = true;
   await store.save(true);
-  assert.equal(store.documents.length, 2);
-  assert.ok((await fs.readdir(project)).some((n) => n.startsWith('历史_')));
+  assert.equal(store.documents.length, 3);
+  assert.equal(
+    (await fs.readdir(project)).some((n) => n.startsWith('历史_')),
+    false
+  );
   const a = r.assets[0];
   await fs.writeFile(store.assetPath(a), 'real-test-bytes');
   a.state = 'done';

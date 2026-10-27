@@ -138,7 +138,7 @@ module.exports = async ({ ui, root, dialog, session, getStore, setTasks }) => {
     if (!a.nodeIds.includes('missing')) await fs.writeFile(project.assetPath(a), bytes);
   }
   await project.checkpoint();
-  const manifest = path.join(project.directory, MANIFEST),
+  const manifest = project.summary().manifestPath,
     before = await fs.readFile(manifest, 'utf8');
   for (const tasks of [
     { task: {} },
@@ -233,7 +233,7 @@ module.exports = async ({ ui, root, dialog, session, getStore, setTasks }) => {
   );
   const otherDirectory = path.join(path.dirname(project.directory), '另一个本地项目');
   await fs.cp(project.directory, otherDirectory, { recursive: true });
-  const otherManifest = path.join(otherDirectory, MANIFEST);
+  const otherManifest = path.join(otherDirectory, project.manifestName);
   dialog.showOpenDialog = async (_parent, opts) => {
     chooserCalls++;
     options = opts;

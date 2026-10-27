@@ -87,7 +87,7 @@ test('Individual text export preserves exact body, distinct safe filenames and e
   const second = await store.saveText('text2');
   assert.notEqual(first.savedText, second.savedText);
   await store.save();
-  assert.equal(store.documents.length, 1);
+  assert.equal(store.documents.length, 2);
   assert.equal(
     await fs.readFile(path.join(store.directory, first.savedText), 'utf8'),
     store.result.entries[0].prompt

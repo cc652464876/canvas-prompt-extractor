@@ -71,7 +71,10 @@ app
     }));
     const options = { kinds: ['image', 'video', 'audio', 'text'], split: true, mode: 'full' };
     let result,
-      rejectSelection = false;
+      rejectSelection = false,
+      localProfile = null,
+      updateRequests = 0,
+      stopRequests = 0;
     const send = (type, payload) => win.webContents.send('lab:event', { type, payload });
     const service = createAuthorService({
       fetcher: async () => Response.json({ code: 0, data: { list: rows, total: rows.length } }),
@@ -108,6 +111,18 @@ app
         return service.select(ids);
       },
       'author-read': () => service.start(),
+      'check-updates': () => {
+        updateRequests++;
+        localProfile = { ...localProfile, readingCanvases: true };
+        send('author', localProfile);
+        return localProfile;
+      },
+      cancel: () => {
+        stopRequests++;
+        localProfile = { ...localProfile, readingCanvases: false };
+        send('author', localProfile);
+        return true;
+      },
       theme: () => ({}),
       update: () => ({ options }),
       'login-state': () => ({}),
@@ -302,6 +317,84 @@ app
     );
     assert.equal(service.snapshot().selectedIds.length, 3);
     check('全部作品未公开时，隐藏后为空且无选择，仍可显示回来并全部选中');
+    localProfile = {
+      ...service.snapshot(),
+      localProject: true,
+      directory: path.join(app.getPath('userData'), 'local-collection')
+    };
+    send('result', { ...result, localProject: true });
+    send('author', localProfile);
+    await until(`document.getElementById('author-read').textContent==='检测画布更新（3）'`);
+    assert.equal(await run(`document.getElementById('start').textContent`), '开始读取画布');
+    for (const width of [1440, 1000, 800, 680, 560]) {
+      win.setContentSize(width, 1100);
+      await wait(60);
+      const button = await run(`(() => {
+        const button = document.getElementById('author-read');
+        const rect = button.getBoundingClientRect();
+        return {
+          visible: !button.hidden && getComputedStyle(button).display !== 'none' && rect.width > 0,
+          fits: rect.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth,
+          disabled: button.disabled,
+          previous: button.previousElementSibling.id,
+          sizes: ['start', 'open-local-project', 'open-canvas', 'folder', 'directory', 'save-prompts', 'download', 'author-read'].map(id => {
+            const rect = document.getElementById(id).getBoundingClientRect();
+            return {id, width:rect.width, height:rect.height};
+          })
+        };
+      })()`);
+      assert.equal(button.visible, true);
+      assert.equal(button.fits, true);
+      assert.equal(button.disabled, false);
+      assert.equal(button.previous, 'author-canvas-filter');
+      for (const size of button.sizes) {
+        assert.equal(
+          size.width,
+          button.sizes[0].width,
+          JSON.stringify({ width, sizes: button.sizes })
+        );
+        assert.equal(
+          size.height,
+          button.sizes[0].height,
+          JSON.stringify({ width, sizes: button.sizes })
+        );
+      }
+    }
+    send('author', { ...localProfile, selectedIds: [] });
+    await until(`document.getElementById('author-read').disabled`);
+    send('author', localProfile);
+    await until(`!document.getElementById('author-read').disabled`);
+    await click('author-read');
+    await until(`document.getElementById('author-read').textContent==='停止检测'`);
+    assert.equal(updateRequests, 1);
+    assert.equal(await run(`document.getElementById('author-read').disabled`), false);
+    assert.equal(await run(`document.getElementById('author-clear').disabled`), true);
+    assert.equal(await run(`document.querySelector('.work-card').disabled`), true);
+    await click('author-read');
+    await until(`document.getElementById('author-read').textContent==='检测画布更新（3）'`);
+    assert.equal(stopRequests, 1);
+    assert.equal(await run(`document.getElementById('author-clear').disabled`), false);
+    win.setContentSize(1440, 1100);
+    await run(`document.getElementById('author-section').scrollIntoView({block:'center'})`);
+    await wait(100);
+    const localCrop = await run(`(() => {
+      const r = document.getElementById('author-section').getBoundingClientRect();
+      return {x:Math.floor(r.x),y:Math.floor(r.y),width:Math.ceil(r.width),height:Math.ceil(r.height)};
+    })()`);
+    await fs.writeFile(
+      path.join(out, 'local-read-button.png'),
+      (await win.webContents.capturePage(localCrop)).toPNG()
+    );
+    win.setContentSize(1440, 1500);
+    await run(`window.scrollTo(0,0)`);
+    await wait(100);
+    await fs.writeFile(
+      path.join(out, 'uniform-action-buttons.png'),
+      (await win.webContents.capturePage()).toPNG()
+    );
+    check(
+      '顶部恢复开始读取画布；五种窗口宽度下八个操作按钮等宽等高；本地选集检测与停止路由正确，空选择及检测期间锁定选择'
+    );
     assert.deepEqual(errors, []);
     await fs.writeFile(
       path.join(out, 'report.json'),

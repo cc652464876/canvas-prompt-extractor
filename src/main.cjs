@@ -19,6 +19,7 @@ const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const { markdown, filterResult } = require('./export/markdown.cjs');
 const { ProjectStore } = require('./project-store.cjs');
+const { createColorTagIndex, validColorTag } = require('./color-tags.cjs');
 const { readOutputDirectory, saveOutputDirectory } = require('./output-preference.cjs');
 const { loadLocalProject, isCurrentProjectPath } = require('./local-project.cjs');
 const { CanvasBrowserWindow } = require('./canvas-browser.cjs');
@@ -28,6 +29,12 @@ const { AccountManager } = require('./account-manager.cjs');
 const { resetBrowserData } = require('./browser-reset.cjs');
 const { popupAction, leftRequestedWork } = require('./extraction-policy.cjs');
 const { DownloadQueue } = require('./download-queue.cjs');
+const {
+  DOWNLOAD_CONCURRENCY_OPTIONS,
+  DEFAULT_DOWNLOAD_CONCURRENCY,
+  readDownloadConcurrency,
+  saveDownloadConcurrency
+} = require('./download-preference.cjs');
 const { selectDownloadAssets } = require('./media-policy.cjs');
 const { normalizePreference, resolveTheme } = require('./theme.cjs');
 const {
@@ -42,7 +49,9 @@ const {
   isTransparentRead
 } = require('./platform-presentation.cjs');
 const { TaskScope } = require('./services/task-scope.cjs');
-const { profileAddress } = require('./platforms/profiles.cjs');
+const { profileAddress, readProfileCount } = require('./platforms/profiles.cjs');
+const { namespaceResult } = require('./author-library.cjs');
+const { contentFingerprint, projectKey } = require('./project-identity.cjs');
 const { createProfilePageReader } = require('./services/profile-page.cjs');
 const { createAuthorService } = require('./services/author.cjs');
 const { WorkWindows, presentWindow } = require('./work-windows.cjs');
@@ -51,9 +60,18 @@ const { readVisibility, saveVisibility } = require('./visibility-preference.cjs'
 const { readSocialPreference, saveSocialPreference } = require('./social-preference.cjs');
 const { AuthorProfiles, HOMES: SOCIAL_HOMES } = require('./services/author-profiles.cjs');
 const { createBrowserWindow, isManualBrowserNavigation } = require('./browser-window.cjs');
+const { holdPageAudio } = require('./page-audio.cjs');
 const { socialAddress } = require('./author-profiles.cjs');
 const { bindDevToolsShortcut, installDevToolsMenu } = require('./devtools-shortcut.cjs');
-app.on('browser-window-created', (_event, window) => bindDevToolsShortcut(window.webContents));
+const {
+  APP_USER_MODEL_ID,
+  applyTaskbarIdentity,
+  syncTaskbarShortcuts
+} = require('./windows-taskbar.cjs');
+app.on('browser-window-created', (_event, window) => {
+  bindDevToolsShortcut(window.webContents);
+  applyTaskbarIdentity(window);
+});
 const { createMediaFetcher } = require('./services/media-fetcher.cjs');
 const { createMediaProtocol } = require('./services/media-protocol.cjs');
 const { ImageInfoService } = require('./services/image-info.cjs');
@@ -101,7 +119,7 @@ const ROOT = path.resolve(__dirname, '..');
 const DATA_ROOT = ROOT;
 // Chromium's HTTP User-Agent must stay ASCII; the native title is localized.
 app.setName('CanvasPromptExtractor');
-if (process.platform === 'win32') app.setAppUserModelId('com.freecanvas.extractor.v1_4');
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
 const verifyExtraction = process.argv.includes('--verify-extraction');
 const verifyThemes = process.argv.includes('--verify-themes');
 const verifyAccounts = process.argv.includes('--verify-account-startup');
@@ -123,6 +141,7 @@ const isolatedVerification =
 const managedPresentation =
   !isolatedVerification ||
   verifyAccounts ||
+  process.argv.includes('--verify-project-updates') ||
   process.argv.includes('--verify-selection-flow') ||
   process.argv.includes('--verify-selection-live');
 const enableAuthorProfiles =
@@ -172,6 +191,10 @@ const appearancePath = path.join(app.getPath('userData'), 'appearance.json');
 const outputPreferencePath = path.join(app.getPath('userData'), 'output-directory.json');
 const visibilityPath = path.join(app.getPath('userData'), 'platform-visibility.json');
 const socialPreferencePath = path.join(app.getPath('userData'), 'social-profile-preference.json');
+const downloadPreferencePath = path.join(app.getPath('userData'), 'download-preference.json');
+let colorTagWriteTail = Promise.resolve();
+let downloadConcurrency = readDownloadConcurrency(downloadPreferencePath),
+  downloadPreferenceWriteTail = Promise.resolve();
 let socialPreferenceWriteTail = Promise.resolve();
 let platformVisible = readVisibility(visibilityPath),
   visibilityWriteTail = Promise.resolve();
@@ -341,8 +364,7 @@ function secureContents(wc, platform) {
       if (task) (task.transparentChildren ||= new Set()).add(child);
     }
     if (task && task.contents?.session === wc.session) {
-      task.childAudio.push({ wc: child.webContents, muted: child.webContents.isAudioMuted() });
-      child.webContents.setAudioMuted(true);
+      task.childAudio.push({ release: holdPageAudio(child.webContents) });
     }
   };
   wc.on('will-navigate', (event, url) => {
@@ -521,6 +543,70 @@ const { runExtraction } = createExtractionService({
   live
 });
 let authorService;
+let authorCountCheck = null;
+function cancelAuthorCountCheck() {
+  authorCountCheck?.abort();
+  authorCountCheck = null;
+}
+async function checkAuthorCount(project) {
+  cancelAuthorCountCheck();
+  const metadata = project.result.metadata;
+  const url =
+    metadata.authorWorkCount?.url ||
+    metadata.workInfo?.authorUrl ||
+    metadata.authorProfiles?.find((p) => p.platform === metadata.platform)?.profileUrl;
+  if (!profileAddress(url)) return;
+  const controller = new AbortController();
+  authorCountCheck = controller;
+  const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]);
+  let window;
+  const readPage = createProfilePageReader((platform) => {
+    window ||= new BrowserWindow({
+      show: false,
+      webPreferences: {
+        partition: 'persist:' + platform,
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false
+      }
+    });
+    window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    return window;
+  });
+  send('author-count', { message: '正在后台检查作者作品数量…' });
+  try {
+    const total = await readProfileCount(
+      url,
+      (address, options, platform) =>
+        session.fromPartition('persist:' + platform).fetch(address, options),
+      signal,
+      readPage
+    );
+    signal.throwIfAborted();
+    if (store !== project || !currentLocalProject) return;
+    const previous = metadata.authorWorkCount?.total;
+    metadata.authorWorkCount = { url, total, checkedAt: new Date().toISOString() };
+    await project.checkpoint();
+    if (store !== project || controller.signal.aborted) return;
+    send('author-count', {
+      total,
+      previous,
+      message: !Number.isSafeInteger(previous)
+        ? `已记录作者作品数量：${total} 部，下次打开时比较。`
+        : previous === total
+          ? `作者作品数量无变化：${total} 部。`
+          : `作者作品数量有变化：${previous} → ${total} 部，可打开作者主页查看。`
+    });
+  } catch (error) {
+    if (!controller.signal.aborted && store === project)
+      send('author-count', {
+        message: '作者作品数量检查失败，稍后重新打开可重试：' + error.message
+      });
+  } finally {
+    if (window && !window.isDestroyed()) window.destroy();
+    if (authorCountCheck === controller) authorCountCheck = null;
+  }
+}
 const { runExtraction: readAuthorWork } = createExtractionService({
   root: ROOT,
   app,
@@ -546,10 +632,17 @@ const { runExtraction: readAuthorWork } = createExtractionService({
     if ('lastAttemptWork' in values) lastAttemptWork = values.lastAttemptWork;
     if ('extractionFeedback' in values) extractionFeedback = values.extractionFeedback;
   },
-  getPlatformWindow: managedPresentation ? getAuthorWindow : getPlatformWindow,
+  getPlatformWindow: (platform, ...args) =>
+    managedPresentation && authorService?.active && !authorService.snapshot()?.localProject
+      ? getAuthorWindow(platform, ...args)
+      : getPlatformWindow(platform, ...args),
   send: () => {},
   status: (message, phase = 'running') => {
-    if (process.argv.includes('--verify-selection-live')) console.log('Live read:', message);
+    if (
+      process.argv.includes('--verify-selection-live') ||
+      process.argv.includes('--verify-project-updates')
+    )
+      console.log('Live read:', message);
     if (task) task.outcome = { message, phase };
   },
   finishExtraction: async (result) => {
@@ -608,6 +701,7 @@ authorService = createAuthorService({
   }
 });
 async function readPage(input, options = {}) {
+  cancelAuthorCountCheck();
   if (profileAddress(input)) return openAuthor(input, options);
   if (authorService.reading) throw new Error('请先停止读取选集。');
   if (task || saveTask || queue?.active || downloadSetup) throw new Error('请先结束当前任务。');
@@ -615,6 +709,7 @@ async function readPage(input, options = {}) {
   return runExtraction(input, options);
 }
 async function openAuthor(input, options = {}) {
+  cancelAuthorCountCheck();
   if (task || saveTask || queue?.active || downloadSetup || localProjectOpening)
     throw new Error('请先结束当前任务，再读取作者主页。');
   exportOptions = { ...exportOptions, ...sanitizeOptions(options) };
@@ -624,11 +719,19 @@ async function finishExtraction(result, options) {
   browserGeneration++;
   browserPreviewAbort.abort();
   browserPreviewAbort = new AbortController();
+  const previousDirectory =
+    store?.result &&
+    !store.profile &&
+    store.directory &&
+    projectKey(store.result.metadata) === projectKey(result.metadata)
+      ? store.directory
+      : '';
   currentResult = result;
   exportOptions = { ...exportOptions, ...sanitizeOptions(options) };
-  send('result', currentResult);
-  store = new ProjectStore(outputDirectory);
+  store = new ProjectStore(previousDirectory || outputDirectory);
   store.options = exportOptions;
+  await store.restoreColorTags(currentResult);
+  send('result', currentResult);
   send('project', { ...store.summary(), root: outputDirectory });
   lastWorkMetadata = currentResult.metadata;
   const d = currentResult.diagnostics;
@@ -651,6 +754,7 @@ function handle(channel, fn) {
         authorService?.listing &&
         [
           'lab:open-local-project',
+          'lab:check-updates',
           'lab:extract',
           'lab:save',
           'lab:save-text',
@@ -667,6 +771,7 @@ function handle(channel, fn) {
         localProjectOpening &&
         [
           'lab:open-local-project',
+          'lab:check-updates',
           'lab:extract',
           'lab:save',
           'lab:save-text',
@@ -689,6 +794,7 @@ function handle(channel, fn) {
   });
 }
 async function openLocalProject(input = '') {
+  cancelAuthorCountCheck();
   if (task || saveTask || queue?.active || downloadSetup)
     throw new Error('请先结束读取、保存或下载任务，再打开本地项目。');
   if (typeof input !== 'string') throw new Error('本地项目路径无效。');
@@ -698,12 +804,12 @@ async function openLocalProject(input = '') {
     const currentPath = currentLocalProject && isCurrentProjectPath(target, store.directory);
     if (!target || currentPath) {
       const selected = await dialog.showOpenDialog(ui, {
-        title: '打开本地项目：选择画布项目或作者项目索引',
+        title: '打开本地项目：选择“打开画布”或“打开作品集”JSON 文件',
         defaultPath: currentPath
           ? path.dirname(store.directory)
           : store.directory || outputDirectory,
         properties: ['openFile', 'showHiddenFiles'],
-        filters: [{ name: '画布项目记录', extensions: ['json'] }]
+        filters: [{ name: '画布或作品集入口', extensions: ['json'] }]
       });
       if (selected.canceled || !selected.filePaths.length) return { cancelled: true };
       target = selected.filePaths[0];
@@ -737,10 +843,64 @@ async function openLocalProject(input = '') {
       `本地项目已打开：${currentResult.entries.length} 条提示词与文本，${currentResult.assets.filter((a) => a.state === 'done').length} 个本地素材。${missing ? ' ' + missing + ' 个素材文件缺失或不完整。' : ''}`,
       'done'
     );
+    void checkAuthorCount(store);
     return { manifestPath: loaded.manifestPath };
   } finally {
     localProjectOpening = false;
   }
+}
+async function checkLocalUpdates(options = {}) {
+  cancelAuthorCountCheck();
+  if (
+    task ||
+    saveTask ||
+    queue?.active ||
+    downloadSetup ||
+    localProjectOpening ||
+    authorService.reading
+  )
+    throw new Error('请先结束当前任务，再检测更新。');
+  if (!currentLocalProject) throw new Error('请先打开本地画布或作品集。');
+  if (authorService.active) return authorService.checkUpdates(options);
+  const previous = store;
+  const metadata = currentResult.metadata;
+  const work = { id: metadata.workId, title: metadata.title, url: metadata.inputUrl };
+  const raw = await readAuthorWork(work.url, {
+    ...exportOptions,
+    ...options,
+    visible: false,
+    forceRead: true,
+    workHint: work
+  });
+  if (
+    raw.metadata.canvasAccess === 'not-public' &&
+    currentResult.metadata.canvasAccess !== 'not-public'
+  )
+    throw new Error('线上画布已不可访问，已保留本地内容。');
+  const result = currentResult.entries.some((entry) => entry.workId)
+    ? namespaceResult(raw, work)
+    : raw;
+  result.metadata.authorWorkCount = metadata.authorWorkCount;
+  const changed = contentFingerprint(currentResult) !== contentFingerprint(result);
+  const candidate = new ProjectStore(path.dirname(previous.directory), {
+    folderName: path.basename(previous.directory)
+  });
+  await candidate.create(result, previous.options, false);
+  browserGeneration++;
+  browserPreviewAbort.abort();
+  browserPreviewAbort = new AbortController();
+  currentResult = result;
+  store = candidate;
+  queue = null;
+  send('result', { ...result, localProject: true });
+  send('project', candidate.summary());
+  status(
+    changed
+      ? '检测到画布更新，可保存提示词并下载新增或变化素材。'
+      : '画布内容无变化，已有素材可继续使用。',
+    'done'
+  );
+  return { changed, ...candidate.summary() };
 }
 function canvasContext() {
   const profile = authorService.snapshot();
@@ -782,6 +942,7 @@ async function collectBrowserSessions() {
   return [...browserSessions];
 }
 async function resetBrowser(settings) {
+  cancelAuthorCountCheck();
   if (browserResetting) throw new Error('浏览器正在重置，请稍候。');
   if (task || saveTask || queue?.active || downloadSetup)
     throw new Error('请先结束读取、保存或下载任务，再重置浏览器。');
@@ -919,6 +1080,7 @@ function createQueue() {
     authorWorkIds = result.authorProfile?.loadedIds;
   const fetcher = createMediaFetcher({ session, metadata: result.metadata });
   return new DownloadQueue({
+    concurrency: downloadConcurrency,
     catalog: result.assets,
     fetcher,
     filePath: (a) => project.assetPath(a),
@@ -986,6 +1148,22 @@ if (ownsInstance)
     .whenReady()
     .then(async () => {
       installDevToolsMenu();
+      if (!isolatedVerification && process.platform === 'win32') {
+        try {
+          syncTaskbarShortcuts({
+            shell,
+            programsDirectory: path.join(
+              app.getPath('appData'),
+              'Microsoft',
+              'Windows',
+              'Start Menu',
+              'Programs'
+            )
+          });
+        } catch (error) {
+          console.error(error.message);
+        }
+      }
       outputDirectory = isolatedVerification
         ? verificationPath(
             ROOT,
@@ -1010,7 +1188,7 @@ if (ownsInstance)
         height: 960,
         minWidth: 680,
         minHeight: 620,
-        show: !isolatedVerification,
+        show: false,
         title: transparentRendering ? '自由画布提取 · v1.4 · 透明读取试用' : '自由画布提取 · v1.4',
         backgroundColor: uiTheme.tokens.bg,
         autoHideMenuBar: true,
@@ -1053,6 +1231,16 @@ if (ownsInstance)
         await socialPreferenceWriteTail;
         return authorProfiles.enabled;
       });
+      handle('lab:download-concurrency', (value) => {
+        downloadPreferenceWriteTail = downloadPreferenceWriteTail
+          .catch(() => {})
+          .then(async () => {
+            await saveDownloadConcurrency(downloadPreferencePath, value);
+            downloadConcurrency = value;
+            return value;
+          });
+        return downloadPreferenceWriteTail;
+      });
       handle('lab:author-select', (ids) => {
         if (savingOperation() || browserResetting || localProjectOpening)
           throw new Error('请先结束当前操作。');
@@ -1063,6 +1251,43 @@ if (ownsInstance)
           throw new Error('请先结束当前操作。');
         exportOptions = { ...exportOptions, ...sanitizeOptions(options) };
         return authorService.start(options);
+      });
+      handle('lab:color-tag', (value) => {
+        const result = currentResult,
+          project = store;
+        const operation = colorTagWriteTail
+          .catch(() => {})
+          .then(async () => {
+            if (!result || !value || !validColorTag(value.color))
+              throw new Error('标签记录无效，请重新打开素材。');
+            const item =
+              value.scope === 'prompts'
+                ? result.entries.find((entry) => entry.nodeId === value.id)
+                : value.scope === 'assets'
+                  ? result.assets.find((asset) => asset.id === value.id)
+                  : null;
+            const index = createColorTagIndex(result),
+              key = item && index.key(item);
+            if (!key || key !== value.key)
+              throw new Error('当前项目已变化，请重新打开素材后设置标签。');
+            if (!project.profile && (!project.directory || project.result !== result))
+              await project.create(result, exportOptions, false);
+            const saved = await project.setColorTag(key, value.color);
+            index.set(key, value.color);
+            const currentItems = createColorTagIndex(currentResult).byKey.get(key) || [];
+            if (
+              currentResult === result ||
+              index.byKey.get(key).some((item) => currentItems.includes(item))
+            )
+              send('color-tags', { key, color: value.color });
+            if (currentResult === result) {
+              store = project;
+              send('project', { ...project.summary(), root: outputDirectory });
+            }
+            return saved;
+          });
+        colorTagWriteTail = operation;
+        return operation;
       });
       handle('lab:author-retry', (id) => {
         if (savingOperation() || browserResetting || localProjectOpening)
@@ -1228,6 +1453,7 @@ if (ownsInstance)
         return true;
       });
       handle('lab:open-local-project', openLocalProject);
+      handle('lab:check-updates', checkLocalUpdates);
       handle('lab:open-canvas', () => {
         return canvasBrowser.open();
       });
@@ -1256,6 +1482,7 @@ if (ownsInstance)
         }
         downloadSetup = true;
         try {
+          await downloadPreferenceWriteTail.catch(() => {});
           await ensureProject();
           send('project', store.summary());
           queue = createQueue();
@@ -1286,7 +1513,12 @@ if (ownsInstance)
         types: PROMPT_TYPES,
         options: exportOptions,
         platformVisible,
-        socialProfilesEnabled: authorProfiles.enabled
+        socialProfilesEnabled: authorProfiles.enabled,
+        downloadSettings: {
+          concurrency: downloadConcurrency,
+          defaultConcurrency: DEFAULT_DOWNLOAD_CONCURRENCY,
+          options: DOWNLOAD_CONCURRENCY_OPTIONS
+        }
       }));
       await ui.loadFile(path.join(__dirname, 'ui', 'index.html'));
       if (transparentRendering && !managedPresentation)
@@ -1301,6 +1533,31 @@ if (ownsInstance)
       if (!isolatedVerification) {
         ui.show();
         ui.focus();
+      }
+      if (process.argv.includes('--verify-download-settings')) {
+        currentResult = { metadata: { platform: 'liblib' }, assets: [] };
+        await require('../开发辅助/验收工具/检查项/verify-download-settings.cjs')({
+          ui,
+          root: ROOT,
+          downloadPreferencePath,
+          createQueue
+        });
+        app.quit();
+        return;
+      }
+      if (process.argv.includes('--verify-color-tags')) {
+        await require('../开发辅助/验收工具/检查项/verify-color-tags.cjs')({
+          ui,
+          root: ROOT,
+          finishExtraction,
+          getResult: () => currentResult,
+          getStore: () => store,
+          setOutputDirectory: (directory) => {
+            outputDirectory = directory;
+          }
+        });
+        app.exit(0);
+        return;
       }
       if (process.argv.includes('--verify-author-profiles')) {
         await require('../开发辅助/验收工具/检查项/verify-author-profiles.cjs')({
@@ -1346,6 +1603,19 @@ if (ownsInstance)
           visibilityPath
         });
         app.quit();
+        return;
+      }
+      if (process.argv.includes('--verify-project-updates')) {
+        await require('../开发辅助/验收工具/检查项/verify-project-updates.cjs')({
+          ui,
+          authorService,
+          getStore: () => store,
+          getResult: () => currentResult,
+          setOutputDirectory: (directory) => {
+            outputDirectory = directory;
+          }
+        });
+        app.exit(0);
         return;
       }
       if (process.argv.includes('--verify-authors')) {
@@ -1539,6 +1809,7 @@ if (ownsInstance)
 let shutdownReady = false,
   shutdownPending = null;
 app.on('before-quit', (event) => {
+  cancelAuthorCountCheck();
   if (shutdownReady) return;
   event.preventDefault();
   if (shutdownPending) return;
@@ -1555,7 +1826,8 @@ app.on('before-quit', (event) => {
     imageInfo.close(),
     workCache.close(),
     visibilityWriteTail,
-    socialPreferenceWriteTail
+    socialPreferenceWriteTail,
+    downloadPreferenceWriteTail
   ]).then((results) => {
     for (const result of results)
       if (result.status === 'rejected') console.error(result.reason.message);

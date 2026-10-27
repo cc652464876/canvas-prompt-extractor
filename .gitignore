@@ -8,3 +8,4 @@ build/
 exports/
 *.log
 *.lnk
+/自由画布提取.exe

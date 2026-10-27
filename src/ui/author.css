@@ -1,7 +1,7 @@
 /* The right-hand toolbar divides evenly into search and independent view toggles. */
 .project-heading { grid-template-columns: minmax(0, 1fr) auto; }
 .project-window-actions { display: grid; grid-template-columns: repeat(2, var(--action-width)); gap: var(--module-gap); }
-.project-window-actions > button { width: 100%; height: var(--control-height); padding: 0 12px; font-size: 13px; white-space: nowrap; }
+.project-window-actions > button { width: var(--action-width); min-width: 0; height: var(--control-height); padding: 0 12px; font-size: 13px; white-space: nowrap; }
 @media (max-width: 790px) {
   .project-heading { grid-template-columns: minmax(0, 1fr); }
   .project-window-actions { justify-self: end; }
@@ -79,8 +79,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 44px;
-  margin: -4px 0 8px;
+  min-height: 22px;
+  margin: 12px 0 8px;
   font-size: 12px;
   color: var(--muted);
   flex-wrap: wrap;
@@ -91,6 +91,7 @@
 }
 .author-actions {
   display: flex;
+  flex: 0 1 auto;
   margin-left: auto;
   gap: 4px;
   flex-wrap: wrap;
@@ -107,6 +108,7 @@
   font-size: 12px;
 }
 .author-section {
+  margin-top: 12px;
   margin-bottom: 20px;
 }
 .author-mode #board-body {
@@ -211,7 +213,7 @@
   }
 }
 
-.author-actions #author-read{height:var(--control-height);min-height:var(--control-height);margin-left:8px;padding:0 16px;font-size:13px}
+.author-actions #author-read{flex:0 0 var(--action-width);width:var(--action-width);min-width:var(--action-width);height:var(--control-height);min-height:var(--control-height);margin-left:8px;padding:0 12px;font-size:13px}
 @media(max-width:600px){.author-actions{width:100%;justify-content:flex-end;flex-wrap:wrap}.author-actions #author-read{margin-left:0}}
 .profile-note {
   margin: 10px 0 0;

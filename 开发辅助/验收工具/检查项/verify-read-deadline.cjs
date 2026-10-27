@@ -62,7 +62,7 @@ module.exports = async ({ root, ui, runExtraction, getWindow, getFeedback, sessi
   const success = await read('success', { timeout: 3500 });
   assert.ok(success.result, JSON.stringify(success));
   assert.equal(success.result.entries.length, 1);
-  assert.equal(getWindow().webContents.isAudioMuted(), false);
+  assert.equal(getWindow().webContents.isAudioMuted(), true, 'Completed hidden pages stay muted');
   assert.ok(success.elapsedMs < 7000);
   checks.push({
     name: 'DOM-ready canvas extracts successfully while an iframe is still loading',
@@ -80,6 +80,7 @@ module.exports = async ({ root, ui, runExtraction, getWindow, getFeedback, sessi
     await wait(20);
   }
   assert.equal(settled, false);
+  assert.equal(getWindow().webContents.isAudioMuted(), true, 'Visible reads stay muted');
   const response = await ui.webContents.executeJavaScript('window.lab.cancel()');
   assert.equal(response.ok, true);
   const cancelled = await reading;

@@ -14,7 +14,10 @@ require('./build.cjs')()
       cwd: root,
       env,
       stdio: 'inherit',
-      windowsHide: true
+      // Electron is a GUI process. SW_HIDE suppresses its first show(), leaving
+      // the app invisible until a second launch activates the existing instance.
+      // The PowerShell launcher already hides the Node helper's console.
+      windowsHide: false
     });
     child.on('error', (e) => {
       console.error(e);

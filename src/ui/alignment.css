@@ -3,7 +3,8 @@
 :root { --panel-padding: 20px; }
 
 .panel,
-.board-toolbar {
+.board-toolbar,
+.selection-toolbar {
   padding: var(--panel-padding);
   border: 1px solid var(--line);
   border-radius: 12px;

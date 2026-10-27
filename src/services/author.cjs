@@ -3,6 +3,10 @@ const { readProfile } = require('../platforms/profiles.cjs');
 const { namespaceResult, mergeResults, AuthorStore } = require('../author-library.cjs');
 const { attachAuthorProfiles } = require('../author-profiles.cjs');
 const { publishedWork } = require('../published-work.cjs');
+const { ProjectStore } = require('../project-store.cjs');
+const { contentFingerprint } = require('../project-identity.cjs');
+const { resolveAuthorDirectory } = require('../project-files.cjs');
+const path = require('node:path');
 function createAuthorService({
   fetcher,
   readProfilePage,
@@ -27,6 +31,10 @@ function createAuthorService({
     options = {},
     activeId = null,
     selectionCancellation = null;
+  async function restoreColorTags(result, author = profile) {
+    const directory = await resolveAuthorDirectory(getRoot(), author, { createRoot: false });
+    await new ProjectStore(directory).restoreColorTags(result);
+  }
   function snapshot() {
     return (
       profile && {
@@ -117,6 +125,7 @@ function createAuthorService({
           };
           if (key) await cache.set(key, value).catch(() => {});
           const result = namespaceResult(value, work);
+          await restoreColorTags(result);
           work.canvasAccess = result.metadata.canvasAccess || 'public';
           work.note = result.metadata.canvasNote || '';
           work.videoAvailable = result.assets.some(
@@ -192,7 +201,9 @@ function createAuthorService({
           }),
           next.authorInfo
         );
-        records.set(work.id, { work, result: namespaceResult(value, work), store: null });
+        const result = namespaceResult(value, work);
+        await restoreColorTags(result, next);
+        records.set(work.id, { work, result, store: null });
         work.state = 'ready';
         work.note = value.metadata.canvasNote;
         work.videoAvailable = value.assets.some(
@@ -249,6 +260,84 @@ function createAuthorService({
     refresh();
     return snapshot();
   }
+  function checkUpdates(settings = {}) {
+    if (!profile?.localProject) throw new Error('请先打开本地作品集。');
+    if (loading || worker) throw new Error('正在读取，请先等待或停止。');
+    if (!selectedIds.length) throw new Error('请先选择要检测的作品。');
+    requestedIds = new Set(selectedIds);
+    const checkedIds = [...requestedIds];
+    worker = (async () => {
+      let changed = 0,
+        failed = 0,
+        checked = 0;
+      try {
+        for (const id of checkedIds) {
+          if (!requestedIds?.has(id)) continue;
+          const old = records.get(id);
+          const work = profile.works.find((w) => w.id === id);
+          if (!work?.url || !old?.store) {
+            failed++;
+            continue;
+          }
+          activeId = id;
+          work.state = 'loading';
+          work.error = '';
+          send('author', snapshot());
+          try {
+            const value = await readWork(work.url, {
+              ...options,
+              ...getOptions(),
+              ...settings,
+              visible: false,
+              forceRead: true,
+              workHint: work
+            });
+            if (!requestedIds?.has(id)) break;
+            if (
+              value.metadata.canvasAccess === 'not-public' &&
+              old.result.metadata.canvasAccess !== 'not-public'
+            )
+              throw new Error('线上画布已不可访问');
+            const result = namespaceResult(attachAuthorProfiles(value, profile.authorInfo), work);
+            result.metadata.authorWorkCount = old.result.metadata.authorWorkCount;
+            const different = contentFingerprint(old.result) !== contentFingerprint(result);
+            const project = new ProjectStore(path.dirname(old.store.directory), {
+              folderName: path.basename(old.store.directory)
+            });
+            await project.create(result, old.store.options, false);
+            records.set(id, { work, result, store: project });
+            work.canvasAccess = result.metadata.canvasAccess || 'public';
+            work.note = different
+              ? '检测到画布更新，可保存提示词并下载新增或变化素材'
+              : '画布内容无变化';
+            work.updateState = different ? 'changed' : 'unchanged';
+            work.state = 'ready';
+            checked++;
+            if (different) changed++;
+          } catch (error) {
+            if (!requestedIds) break;
+            work.state = 'error';
+            work.error = '检查失败，已保留本地内容：' + error.message;
+            failed++;
+          } finally {
+            if (work.state === 'loading') work.state = 'ready';
+            activeId = null;
+            refresh();
+          }
+        }
+      } finally {
+        const cancelled = !requestedIds;
+        worker = null;
+        requestedIds = null;
+        refresh();
+        send('status', {
+          message: `画布更新检测${cancelled ? '已停止' : '完成'}：已检查 ${checked} 部，${changed} 部有更新${failed ? '，' + failed + ' 部检查失败，已保留本地内容' : ''}。`,
+          phase: failed ? 'attention' : 'done'
+        });
+      }
+    })();
+    return snapshot();
+  }
   function retry(id) {
     if (profile?.localProject) throw new Error('请补齐本地作品文件后重新打开作者索引。');
     if (loading) throw new Error('正在读取作者列表，请稍候。');
@@ -298,6 +387,7 @@ function createAuthorService({
     },
     select,
     start,
+    checkUpdates,
     retry,
     stop,
     clear,

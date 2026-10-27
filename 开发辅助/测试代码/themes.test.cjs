@@ -63,6 +63,7 @@ test('All palettes provide every consumed token and keep readable text contrast'
     'action-width',
     'module-gap',
     'module-row-gap',
+    'reader-toolbar-spacing',
     'checkbox-size',
     'columns',
     'category-count',
@@ -74,6 +75,8 @@ test('All palettes provide every consumed token and keep readable text contrast'
     'prompt-ref-gap',
     'prompt-ref-radius',
     'prompt-chip-radius',
+    'tag-color',
+    'tag-none',
     'reference-size'
   ]);
   const used = [...new Set([...css.matchAll(/var\(--([a-z-]+)/g)].map((m) => m[1]))].filter(

@@ -19,4 +19,18 @@ async function readProfile(input, fetcher, signal, onProgress, readPage) {
     readPage
   );
 }
-module.exports = { profileAddress, readProfile };
+async function readProfileCount(input, fetcher, signal, readPage) {
+  const address = profileAddress(input);
+  if (!address) throw new Error('本地记录中没有有效的作者主页。');
+  const adapter = getAdapter(address.platform).profile;
+  if (adapter.readCount)
+    return adapter.readCount(
+      input,
+      (url, options) => fetcher(url, options, address.platform),
+      signal
+    );
+  // Other platforms reuse their complete public listing, without reading canvases.
+  const profile = await readProfile(input, fetcher, signal, () => {}, readPage);
+  return profile.works.length;
+}
+module.exports = { profileAddress, readProfile, readProfileCount };

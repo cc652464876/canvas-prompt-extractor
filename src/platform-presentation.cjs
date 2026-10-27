@@ -13,6 +13,7 @@ function beginTransparentRead(window) {
   };
   transparentWindows.set(window, previous);
   try {
+    window.browserToolbar?.syncAudio?.();
     window.setOpacity(0);
     window.setSkipTaskbar(true);
     window.setIgnoreMouseEvents(true);
@@ -36,5 +37,6 @@ function endTransparentRead(window, reveal = false, { keepVisible = false } = {}
   window.setSkipTaskbar(false);
   window.setOpacity(previous.opacity);
   if (reveal) window.show();
+  window.browserToolbar?.syncAudio?.();
 }
 module.exports = { beginTransparentRead, endTransparentRead, isTransparentRead };

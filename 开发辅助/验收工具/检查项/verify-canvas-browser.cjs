@@ -285,7 +285,7 @@ module.exports = async ({
     (await ui.webContents.capturePage()).toPNG()
   );
   const one = (await fs.readdir(library, { withFileTypes: true })).find((e) => e.isDirectory());
-  assert.equal((await open(path.join(library, one.name, '.画布项目.json'))).ok, true);
+  assert.equal((await open(path.join(library, one.name))).ok, true);
   await canvasBrowser.refresh();
   assert.equal(canvasBrowser.model.tabs.length, 1);
   assert.equal(authorService.active, false);

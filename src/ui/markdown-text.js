@@ -15,10 +15,15 @@ parser.renderer.rules.image = (tokens, index) => parser.utils.escapeHtml(tokens[
 export function createMarkdownText(source, decorateText = null) {
   const element = document.createElement('div');
   let preview = null,
+    raw = null,
     mode = null;
-  const raw = document.createElement('pre');
-  raw.className = 'markdown-source';
-  raw.textContent = source;
+  function makeSource() {
+    const content = document.createElement('pre');
+    content.className = 'markdown-source';
+    if (decorateText) content.append(...decorateText(source).childNodes);
+    else content.textContent = source;
+    return content;
+  }
   function makePreview() {
     const content = document.createElement('div');
     content.className = 'markdown-content';
@@ -91,7 +96,10 @@ export function createMarkdownText(source, decorateText = null) {
       if (mode === 'preview') {
         preview ||= makePreview();
         element.replaceChildren(preview);
-      } else element.replaceChildren(raw);
+      } else {
+        raw ||= makeSource();
+        element.replaceChildren(raw);
+      }
     }
   };
 }

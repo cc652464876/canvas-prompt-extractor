@@ -1,7 +1,8 @@
 'use strict';
 const fs = require('node:fs/promises'),
   path = require('node:path');
-const { ProjectStore, MANIFEST } = require('./project-store.cjs');
+const { ProjectStore } = require('./project-store.cjs');
+const { isProjectFile, findProjectFile } = require('./project-files.cjs');
 
 function absoluteProjectPath(input) {
   if (typeof input !== 'string') throw new Error('本地项目路径无效。');
@@ -19,7 +20,12 @@ function isCurrentProjectPath(input, directory) {
       return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
     };
     const target = canonical(absoluteProjectPath(input));
-    return target === canonical(directory) || target === canonical(path.join(directory, MANIFEST));
+    return (
+      target === canonical(directory) ||
+      (path.dirname(target) === canonical(directory) &&
+        (isProjectFile(path.basename(target)) ||
+          isProjectFile(path.basename(target), 'collection')))
+    );
   } catch {
     return false;
   }
@@ -34,32 +40,33 @@ async function loadLocalProject(input) {
     throw error;
   }
   const directory = stat.isDirectory() ? target : path.dirname(target);
+  let name;
   if (stat.isDirectory()) {
-    try {
-      await fs.access(path.join(directory, MANIFEST));
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-      try {
-        await fs.access(path.join(directory, '.项目索引.json'));
-      } catch (missing) {
-        if (missing.code === 'ENOENT')
-          throw new Error('项目文件夹中未找到 .画布项目.json 或 .项目索引.json。');
-        throw missing;
-      }
-      return require('./local-collection.cjs').loadLocalCollection(directory);
+    name = await findProjectFile(directory, 'canvas', true);
+    if (!name) {
+      const collection = await findProjectFile(directory, 'collection', true);
+      if (!collection)
+        throw new Error(
+          '项目文件夹中未找到打开画布或打开作品集的 JSON 入口文件（兼容 .画布项目.json、.项目索引.json）。'
+        );
+      return require('./local-collection.cjs').loadLocalCollection(directory, collection);
     }
-  } else if (path.basename(target) === '.项目索引.json') {
-    return require('./local-collection.cjs').loadLocalCollection(directory);
+  } else {
+    name = path.basename(target);
+    if (!stat.isFile() || (!isProjectFile(name) && !isProjectFile(name, 'collection')))
+      throw new Error(
+        '请选择打开画布_平台_作者_作品名.json、打开作品集_平台_作者.json 或对应文件夹（也支持旧版入口）。'
+      );
+    if (isProjectFile(name, 'collection'))
+      return require('./local-collection.cjs').loadLocalCollection(directory, name);
   }
-  if (!stat.isDirectory() && (!stat.isFile() || path.basename(target) !== MANIFEST))
-    throw new Error('请选择 .画布项目.json、作者 .项目索引.json 或对应文件夹。');
-  const manifestPath = path.join(directory, MANIFEST),
+  const manifestPath = path.join(directory, name),
     store = new ProjectStore(path.dirname(directory));
   let result;
   try {
-    result = await store.load(directory);
+    result = await store.load(directory, name);
   } catch (error) {
-    if (error.code === 'ENOENT') throw new Error('项目文件夹中未找到 .画布项目.json。');
+    if (error.code === 'ENOENT') throw new Error('项目文件夹中未找到画布项目入口文件。');
     if (error instanceof SyntaxError) throw new Error('项目记录文件损坏，无法打开。');
     throw error;
   }

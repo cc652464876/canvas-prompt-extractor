@@ -66,10 +66,10 @@ module.exports = async ({ ui, accounts, independentBrowser, getWindow, session, 
     const shortcutSizes = await run(
       `Array.from(document.querySelectorAll('#platform-shortcuts button,.social-login-actions button')).map(b=>{const r=b.getBoundingClientRect();return {text:b.textContent,width:r.width,height:r.height}})`
     );
-    assert.equal(shortcutSizes.length, listPlatforms().length + 4);
+    assert.equal(shortcutSizes.length, listPlatforms().length + 5);
     assert.deepEqual(
       shortcutSizes.slice(listPlatforms().length).map((b) => b.text),
-      ['Midjourney', '小红书', '抖音', 'bilibili']
+      ['Midjourney', '小红书', '抖音', 'bilibili', 'Google']
     );
     for (const button of shortcutSizes) {
       assert.ok(Math.abs(button.width - shortcutSizes[0].width) < 1);

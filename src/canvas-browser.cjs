@@ -116,9 +116,6 @@ class CanvasBrowserWindow {
     if (!win || win.isDestroyed()) return;
     const browser = win.browserToolbar;
     const visible = !this.userHidden && Boolean(browser.tabs.size);
-    for (const tab of browser.tabs.values())
-      if (tab.contents)
-        tab.contents.setAudioMuted(!visible || tab.id !== browser.activeId || win.isMinimized());
     browser.sync();
     if (!visible) beginTransparentRead(win);
     else {

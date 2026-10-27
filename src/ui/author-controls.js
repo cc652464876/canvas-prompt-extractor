@@ -57,17 +57,24 @@ export function createAuthorControls({
       renderedGrid = null;
       return;
     }
-    const visible = visibleWorks(),
+    const updating = Boolean(profile.localProject && profile.readingCanvases),
+      visible = visibleWorks(),
       visibleIds = new Set(visible.map((work) => work.id)),
       allowedSelection = [...selected].filter((id) => visibleIds.has(id));
     // A pending canvas read may discover a private canvas after filtering was
     // enabled. Keep the service selection in sync, including after UI unlocks.
-    if (hideUnpublished && !pending && !getLocked() && allowedSelection.length !== selected.size) {
+    if (
+      hideUnpublished &&
+      !pending &&
+      !getLocked() &&
+      !updating &&
+      allowedSelection.length !== selected.size
+    ) {
       void select(allowedSelection);
       return;
     }
     const columns = getColumns(),
-      locked = getLocked() || Boolean(pending),
+      locked = getLocked() || Boolean(pending) || updating,
       grid = $('author-works');
     $('author-count').textContent =
       `共 ${profile.works.length} 部${hideUnpublished ? ' · 显示 ' + visible.length + ' 部' : ''} · 已选择 ${selected.size} 部`;
@@ -82,9 +89,10 @@ export function createAuthorControls({
     $('author-canvas-filter').textContent = hideUnpublished ? '显示未公开画布' : '隐藏未公开画布';
     $('author-canvas-filter').setAttribute('aria-pressed', String(hideUnpublished));
     $('author-read').textContent = profile.readingCanvases
-      ? '停止读取画布'
-      : '开始读取画布（' + selected.size + '）';
-    $('author-read').hidden = Boolean(profile.localProject);
+      ? profile.localProject
+        ? '停止检测'
+        : '停止读取画布'
+      : (profile.localProject ? '检测画布更新' : '开始读取画布') + '（' + selected.size + '）';
     $('author-read').disabled =
       getLocked() ||
       Boolean(pending) ||

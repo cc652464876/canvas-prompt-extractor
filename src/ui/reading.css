@@ -1,14 +1,25 @@
 /* Stacked readers: media -> title -> references -> prompt.
    Side readers keep their two independent groups and align at the top. */
+#reader-section {
+  --reader-toolbar-spacing: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
 #reader-section > .reader-toolbar {
   position: sticky;
   top: 0;
   z-index: 20;
-  margin: -12px 0 0;
-  padding: 12px 0;
+  margin: 0;
+  padding: var(--reader-toolbar-spacing) 0;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
   background: var(--bg);
-  /* Keep the separator inside the toolbar so it cannot cover the first card's frame. */
-  box-shadow: inset 0 -1px 0 var(--line);
+  box-shadow: none;
+}
+#reader-section > .reader-toolbar .reader-title {
+  align-self: center;
+  margin: 0;
 }
 
 #reading-board:not([data-layout=side]) .reading-content {

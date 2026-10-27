@@ -4,17 +4,15 @@ const fs = require('node:fs/promises');
 const { createHash } = require('node:crypto');
 const { ProjectStore, atomic } = require('./project-store.cjs');
 const { APPLICATION_VERSION } = require('./core/model.cjs');
-function safeFolder(value, fallback = '未命名') {
-  let name =
-    String(value || '')
-      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/[. ]+$/, '')
-      .slice(0, 85) || fallback;
-  if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) name = '_' + name;
-  return name;
-}
+const { createColorTagIndex } = require('./color-tags.cjs');
+const {
+  safeFolder,
+  authorFolderName,
+  isAuthorFolder,
+  resolveAuthorDirectory,
+  projectFolderName,
+  collectionName
+} = require('./project-files.cjs');
 function namespaceResult(original, work) {
   const nodes = new Set((original.nodeSummaries || []).map((n) => n.nodeId));
   for (const e of original.entries) nodes.add(e.nodeId);
@@ -140,7 +138,11 @@ class AuthorStore {
     this.directory = null;
     this.options = {};
     this.documents = [];
-    this.authorDirectory = path.join(root, safeFolder(profile.platform + '_' + profile.author));
+    this.authorDirectory = profile.localProject
+      ? profile.directory
+      : isAuthorFolder(path.basename(path.resolve(root)), profile)
+        ? path.resolve(root)
+        : path.join(root, authorFolderName(profile));
   }
   async prepare() {
     if (this.profile.localProject) {
@@ -148,35 +150,7 @@ class AuthorStore {
       for (const record of this.records) record.store.options = this.options;
       return this;
     }
-    await fs.mkdir(this.root, { recursive: true });
-    let index = {};
-    const file = path.join(this.root, '.作者索引.json'),
-      key = this.profile.platform + '|' + this.profile.uuid;
-    try {
-      index = JSON.parse(await fs.readFile(file, 'utf8'));
-    } catch {}
-    let name = index[key];
-    if (
-      typeof name !== 'string' ||
-      name !== path.basename(name) ||
-      safeFolder(name) !== name ||
-      ['.', '..'].includes(name)
-    ) {
-      name = safeFolder(this.profile.platform + '_' + this.profile.author);
-      if (
-        Object.entries(index).some(
-          ([id, folder]) => id !== key && folder.toLowerCase() === name.toLowerCase()
-        ) ||
-        (await fs.stat(path.join(this.root, name)).then(
-          () => true,
-          () => false
-        ))
-      )
-        name += '_' + createHash('sha256').update(key).digest('hex').slice(0, 8);
-      index[key] = name;
-      await atomic(file, JSON.stringify(index, null, 2));
-    }
-    this.directory = this.authorDirectory = path.join(this.root, name);
+    this.directory = this.authorDirectory = await resolveAuthorDirectory(this.root, this.profile);
     await fs.mkdir(this.directory, { recursive: true });
     await atomic(
       path.join(this.directory, '.作者选集.json'),
@@ -200,9 +174,20 @@ class AuthorStore {
       )
     );
     for (const record of this.records) {
+      record.result.metadata.authorWorkCount = {
+        url: this.profile.url,
+        total: this.profile.works.length,
+        checkedAt: new Date().toISOString()
+      };
       if (!record.store || record.store.root !== this.directory) {
         const project = new ProjectStore(this.directory, {
-          folderName: safeFolder(record.work.title)
+          folderName: projectFolderName({
+            ...record.result.metadata,
+            platform: this.profile.platform,
+            author: this.profile.author,
+            title: record.work.title
+          }),
+          indexName: collectionName(this.profile)
         });
         await project.create(record.result, this.options, false);
         record.store = project;
@@ -231,6 +216,12 @@ class AuthorStore {
   async checkpoint() {
     for (const r of this.records) await r.store?.checkpoint();
     return this.summary();
+  }
+  async setColorTag(key, color) {
+    const record = this.records.find((record) => createColorTagIndex(record.result).byKey.has(key));
+    if (!record) throw new Error('未找到标签对应的作品。');
+    if (!record.store) await this.prepare();
+    return record.store.setColorTag(key, color);
   }
   async prepareRedownload(ids) {
     for (const r of this.records) await r.store.prepareRedownload(ids);

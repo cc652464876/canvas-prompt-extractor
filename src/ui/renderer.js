@@ -3,6 +3,7 @@ import { profileAddress as jimengProfileAddress } from '../platforms/jimeng/prof
 import { createAccountControls } from './account-controls.js';
 import { createThemeManager } from './theme-manager.js';
 import { createTypographyManager } from './typography-manager.js';
+import { createAppearanceDropdown } from './appearance-dropdown.js';
 import {
   TYPES,
   MEDIA,
@@ -44,6 +45,7 @@ import { promptReferenceLabel, promptReferenceTokens } from './prompt-display.js
 import { createImageInfoDialog, createReaderImageInfo } from './image-info.js';
 import { createPromptDialog, promptWindowButton } from './prompt-dialog.js';
 import { createMarkdownText } from './markdown-text.js';
+import { createColorTags } from './color-tags.js';
 const $ = (id) => document.getElementById(id);
 const imageInfoDialog = createImageInfoDialog();
 const promptDialog = createPromptDialog({ getTypography: () => promptTypography.get() });
@@ -63,13 +65,58 @@ let result = null,
   renderTimer;
 let author = null,
   authorLoading = false;
+const colorTags = createColorTags({
+  getResult: () => result,
+  onFilter: () => {
+    page = 0;
+    renderBoard();
+  },
+  onError: (message) => status(message, 'error'),
+  onChange: async (item, color, key) => {
+    const snapshot = result;
+    const scope = snapshot.entries.includes(item) ? 'prompts' : 'assets';
+    const response = await window.lab.setColorTag({
+      scope,
+      id: scope === 'prompts' ? item.nodeId : item.id,
+      key,
+      color
+    });
+    if (!response.ok) throw new Error(response.error);
+    if (snapshot === result) {
+      colorTags.set(key, color);
+      refreshTagFilter();
+    }
+    if (response.value?.warning) status(response.value.warning, 'attention');
+  }
+});
+colorTags.mount($('color-tag-filters'));
+function refreshTagFilter() {
+  const entries = $('entries');
+  const expected = filtered(result, scope, filters[scope], $('search').value).filter(
+    colorTags.matches
+  );
+  const shown = expected.slice(page * pageSize(columns), (page + 1) * pageSize(columns));
+  const cards = entries.querySelectorAll('.content-card');
+  if (
+    shown.length !== cards.length ||
+    shown.some(
+      (item, i) =>
+        cards[i]?.dataset.key !== scope + ':' + (scope === 'assets' ? item.id : item.nodeId)
+    )
+  )
+    renderBoard();
+}
 const authorControls = createAuthorControls({
   getColumns: () => columns,
   getReadLocked: () => busy || downloads?.active,
   getLocked: () => saving || authorLoading || downloadStarting || browserResetting || localOpening,
   onRead: async (reading) => {
     try {
-      const response = reading ? await window.lab.cancel() : await window.lab.readWorks(options());
+      const response = reading
+        ? await window.lab.cancel()
+        : author?.localProject
+          ? await window.lab.checkUpdates(options())
+          : await window.lab.readWorks(options());
       if (!response.ok) status(response.error, 'error');
     } catch (error) {
       status(error.message, 'error');
@@ -79,6 +126,8 @@ const authorControls = createAuthorControls({
 });
 function syncAuthorViews() {
   const enabled = Boolean(author);
+  $('selection-toolbar').hidden = !result && !enabled;
+  document.querySelector('.author-actions').hidden = !enabled;
   document.body.classList.toggle('author-mode', enabled);
   $('works-toggle').hidden = !enabled;
   if (enabled) {
@@ -211,7 +260,10 @@ function status(message, phase = 'running') {
 function syncProfileNote() {
   $('jimeng-profile-note').hidden = !jimengProfileAddress($('url').value);
 }
-$('url').addEventListener('input', syncProfileNote);
+$('url').addEventListener('input', () => {
+  syncProfileNote();
+  updateButtons();
+});
 function checkbox(root, key, label, onChange) {
   const wrapper = el('label'),
     input = el('input');
@@ -308,6 +360,7 @@ function updateButtons() {
   const authorFailed = Boolean(
     author?.works.some((w) => author.selectedIds.includes(w.id) && w.error)
   );
+  const updating = Boolean(author?.localProject && author?.readingCanvases);
   const active = downloads?.active,
     locked =
       busy ||
@@ -316,16 +369,21 @@ function updateButtons() {
       active ||
       downloadStarting ||
       browserResetting ||
-      localOpening;
+      localOpening ||
+      updating;
   $('start').disabled =
     saving ||
     active ||
     downloadStarting ||
     browserResetting ||
     localOpening ||
-    Boolean(author?.readingCanvases);
+    Boolean(author?.readingCanvases && !author?.localProject);
   $('start').textContent =
-    (busy && !author?.readingCanvases) || authorLoading ? '停止读取' : '开始读取网页';
+    busy || authorLoading || updating
+      ? result?.localProject
+        ? '停止检测'
+        : '停止读取'
+      : '开始读取画布';
   for (const id of ['directory', 'mode-toggle']) $(id).disabled = locked;
   $('directory').disabled = locked || Boolean(project?.directory);
   $('directory').title = project?.directory
@@ -342,8 +400,9 @@ function updateButtons() {
   for (const c of $('export-types').querySelectorAll('input')) c.disabled = locked;
   $('split').disabled = locked;
   for (const c of $('download-types').querySelectorAll('input')) c.disabled = locked;
-  $('url').disabled = busy || authorLoading;
+  $('url').disabled = busy || authorLoading || updating;
   $('save-prompts').disabled =
+    updating ||
     busy ||
     authorLoading ||
     active ||
@@ -358,6 +417,7 @@ function updateButtons() {
   const workCount = author ? author.selectedIds.length : result ? 1 : 0;
   $('save-prompts').textContent = saving ? '停止保存' : `保存提示词（${workCount}）`;
   $('download').disabled =
+    updating ||
     busy ||
     authorLoading ||
     saving ||
@@ -439,13 +499,6 @@ function mediaState(a) {
       unavailable: '地址不可用'
     }[a?.state] || '待下载'
   );
-}
-function bytes(n) {
-  return n >= 1048576
-    ? (n / 1048576).toFixed(1) + ' MB'
-    : n >= 1024
-      ? (n / 1024).toFixed(0) + ' KB'
-      : (n || 0) + ' B';
 }
 async function reveal(a) {
   if (!a) return;
@@ -539,19 +592,16 @@ function card(item) {
   c.append(body);
   if (columns > 0) {
     const foot = el('div', '', 'card-footer');
-    const size = a?.state === 'done' ? a.bytes : a?.total;
     const chars = isAsset
       ? result.entries.filter(
           (e) =>
             e.outputAssetIds?.includes(a.id) || e.references.some((r) => r.assetIds?.includes(a.id))
         ).length + ' 条关联'
       : Array.from(item.prompt || '').filter((ch) => ch !== '\n' && ch !== '\r').length + ' 字符';
-    foot.append(
-      el('span', size ? bytes(size) : a ? '大小未知' : '无媒体', 'file-size'),
-      el('span', chars, 'prompt-count')
-    );
+    foot.append(colorTags.dot(item), el('span', chars, 'prompt-count'));
     c.append(foot);
   }
+  if (columns === 0) c.prepend(colorTags.dot(item));
   if (columns === 0)
     c.addEventListener('click', (e) => {
       if (!e.target.closest('button')) openReader(scope, item);
@@ -1205,7 +1255,7 @@ function detail(item, record) {
   locate.hidden = true;
   copy.disabled = isAsset || !item.prompt?.trim();
   controls.append(download, locate, remove, copy, collapse);
-  head.append(title, controls);
+  head.append(colorTags.dot(item), title, controls);
   head.addEventListener('click', (e) => {
     if (!e.target.closest('button')) toggle();
   });
@@ -1476,7 +1526,9 @@ function renderBoard() {
   if (result) $('content-summary').textContent = contentSummary(result);
   if (!result) return;
   assetMap = new Map(result.assets.map((a) => [a.id, a]));
-  const items = filtered(result, scope, filters[scope], $('search').value),
+  const items = filtered(result, scope, filters[scope], $('search').value).filter(
+      colorTags.matches
+    ),
     size = pageSize(columns);
   page = Math.max(0, Math.min(page, Math.ceil(items.length / size) - 1));
   const shown = items.slice(page * size, (page + 1) * size);
@@ -1496,9 +1548,11 @@ function renderBoard() {
           ? '所选作品未公开画布'
           : author && !author.selectedIds.length
             ? '选择作品后显示内容'
-            : filters[scope].size
-              ? '当前分类没有匹配内容'
-              : '请选择要查看的类别'
+            : colorTags.excludedOnly
+              ? '暂无匹配的已排除素材'
+              : filters[scope].size
+                ? '当前分类没有匹配内容'
+                : '请选择要查看的类别'
       ),
       el(
         'p',
@@ -1508,7 +1562,9 @@ function renderBoard() {
           ? '作品保留在上方作品集中；可在下载区下载作品视频。'
           : author && !author.selectedIds.length
             ? '点击上方作品卡片，可同时选择多部。'
-            : '分类按钮支持多选；浏览筛选不改变保存或下载范围。'
+            : colorTags.excludedOnly
+                ? '点击工具栏左侧黑点可返回原有筛选；再次点击素材当前选中的标签可取消标签，也可改为其他颜色恢复。'
+              : '分类按钮支持多选；浏览筛选不改变保存或下载范围。'
       )
     );
     grid.append(empty);
@@ -1626,6 +1682,10 @@ function applyProject(payload) {
 }
 
 window.lab.onEvent(({ type, payload, taskId }) => {
+  if (type === 'color-tags') {
+    colorTags.set(payload.key, payload.color);
+    refreshTagFilter();
+  }
   if (type === 'reset' && taskId) activeTaskId = Math.max(activeTaskId, taskId);
   if (taskId && taskId < activeTaskId) return;
   if (type === 'status') status(payload.message, payload.phase);
@@ -1662,6 +1722,7 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     updateButtons();
   }
   if (type === 'reset') {
+    colorTags.close();
     imageInfoDialog.close();
     clearVideoThumbnails();
     $('retry').hidden = true;
@@ -1686,6 +1747,8 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     $('pagination').replaceChildren();
   }
   if (type === 'result') {
+    colorTags.close();
+    $('author-update-notice').hidden = true;
     imageInfoDialog.close();
     const preservedDownloads = payload.authorProfile && downloads?.authorWorkIds ? downloads : null;
     if (payload.localProject) {
@@ -1724,6 +1787,10 @@ window.lab.onEvent(({ type, payload, taskId }) => {
     refreshDownload();
   }
   if (type === 'project') applyProject(payload);
+  if (type === 'author-count') {
+    $('author-update-notice').textContent = payload.message;
+    $('author-update-notice').hidden = false;
+  }
   if (type === 'downloads') showDownloads(payload);
   if (type === 'image-brands' && result) {
     for (const { assetId, brand } of payload) {
@@ -1759,11 +1826,15 @@ async function extract() {
   busy = true;
   updateButtons();
   try {
-    const r = await window.lab.extract(input, {
+    const settings = {
       ...options(),
       visible: $('show-first').checked,
       theme: appearance.get()
-    });
+    };
+    const local = result?.localProject && input === result.metadata.inputUrl;
+    const r = local
+      ? await window.lab.checkUpdates(settings)
+      : await window.lab.extract(input, settings);
     if (!r.ok) status(r.error, 'error');
   } catch (e) {
     status(e.message, 'error');
@@ -1853,8 +1924,8 @@ for (const button of document.querySelectorAll('[data-social-login],[data-browse
         : await window.lab.socialLogin(button.dataset.socialLogin);
       if (!response.ok) throw new Error(response.error);
       notice.textContent = browserLogin
-        ? '已打开 Midjourney，可在内置浏览器中登录。'
-        : '请在打开的平台页面登录；完成后重新点击“开始读取网页”更新公开用户资料。';
+        ? '已打开 ' + button.textContent.trim() + '，可在内置浏览器中登录。'
+        : '请在打开的平台页面登录；完成后重新点击“开始读取画布”更新公开用户资料。';
     } catch (error) {
       notice.textContent = error.message;
     }
@@ -2023,6 +2094,25 @@ const promptTypography = createTypographyManager({
   storage: appearanceStorage,
   onError: (error) => status(error.message, 'error')
 });
+let downloadSettings,
+  downloadConcurrencyDropdown,
+  downloadConcurrencyRevision = 0;
+function setDownloadConcurrency(value) {
+  const revision = ++downloadConcurrencyRevision;
+  downloadConcurrencyDropdown.set(value);
+  window.lab
+    .downloadConcurrency(value)
+    .then((response) => {
+      if (!response.ok) throw new Error(response.error);
+      downloadSettings.concurrency = response.value;
+      if (revision === downloadConcurrencyRevision) downloadConcurrencyDropdown.set(response.value);
+    })
+    .catch((error) => {
+      if (revision === downloadConcurrencyRevision)
+        downloadConcurrencyDropdown.set(downloadSettings.concurrency);
+      status(error.message, 'error');
+    });
+}
 function setBrowserResetting(value) {
   browserResetting = Boolean(value);
   for (const control of $('appearance-dialog').querySelectorAll('button,input'))
@@ -2074,6 +2164,7 @@ $('appearance-reset').addEventListener('click', () => {
   document.dispatchEvent(new Event('appearance-reset'));
   appearance.set(window.CanvasThemes.DEFAULT_PREFERENCE);
   promptTypography.set(window.PromptTypography.DEFAULT_TYPOGRAPHY);
+  if (downloadSettings) setDownloadConcurrency(downloadSettings.defaultConcurrency);
 });
 try {
   const saved = localStorage.getItem('columns');
@@ -2106,6 +2197,16 @@ window.lab
       $('output-dir').textContent = r.value.outputDirectory;
       $('mode').value = r.value.options.mode;
       $('social-profiles-enabled').checked = r.value.socialProfilesEnabled === true;
+      downloadSettings = r.value.downloadSettings;
+      downloadConcurrencyDropdown = createAppearanceDropdown({
+        trigger: $('download-concurrency-trigger'),
+        list: $('download-concurrency-menu'),
+        options: downloadSettings.options.map((value) => ({ value, label: String(value) })),
+        onChange: setDownloadConcurrency,
+        maxHeight: 280
+      });
+      downloadConcurrencyDropdown.set(downloadSettings.concurrency);
+      $('download-concurrency-trigger').disabled = browserResetting;
       if (typeof r.value.platformVisible === 'boolean') {
         visible = r.value.platformVisible;
         $('show-first').checked = visible;
@@ -2129,6 +2230,6 @@ function previewOutput(item, context) {
   body.append(el('pre', item.prompt || '文本正文读取失败，节点与关联关系已保留。'));
   return body;
 }
-initMediaDialog(previewOutput, stopIn, enterPreviewReader, reveal);
+initMediaDialog(previewOutput, stopIn, enterPreviewReader, reveal, (item) => colorTags.dot(item));
 renderBoard();
 updateReaderLayout();

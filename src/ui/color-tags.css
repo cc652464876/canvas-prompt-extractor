@@ -1,0 +1,31 @@
+:root { --tag-none: color-mix(in srgb, var(--text) 48%, var(--surface)); }
+.selection-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.color-tag-filters { display: flex; align-items: center; flex: none; gap: 8px; }
+button.color-tag-dot, button.color-tag-filter, button.color-tag-choice {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 28px; height: 28px; min-width: 28px; min-height: 28px;
+  margin: 0; padding: 0; border: 1px solid transparent; border-radius: 50%;
+  background: transparent; box-shadow: none; line-height: 1; vertical-align: middle;
+}
+button.color-tag-dot > span, button.color-tag-filter > span, button.color-tag-choice > span {
+  display: block; width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--tag-color);
+}
+.color-tag-dot[data-color-tag="none"] > span { background: transparent; border: 1.5px solid var(--tag-none); }
+button.color-tag-filter, button.color-tag-choice { width: 30px; height: 30px; min-width: 30px; min-height: 30px; }
+button.color-tag-filter > span, button.color-tag-choice > span { width: 16px; height: 16px; }
+button.color-tag-dot:hover, button.color-tag-filter:hover, button.color-tag-choice:hover { background: var(--soft); border-color: transparent; }
+button.color-tag-filter[aria-pressed="true"], button.color-tag-choice[aria-pressed="true"] {
+  border-color: var(--selection-border); background: var(--selection-bg); box-shadow: none;
+}
+.color-tag-menu {
+  position: fixed; inset: auto; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--text); box-shadow: var(--popup-shadow); gap: 6px;
+}
+.color-tag-menu:popover-open { display: flex; }
+.content-card .card-footer > .color-tag-dot { width: 22px; min-width: 22px; height: 18px; min-height: 18px; justify-content: flex-start; }
+.content-card .card-footer > .color-tag-dot:hover { background: transparent; }
+.content-grid[data-text="true"] .content-card > .color-tag-dot { margin-left: 4px; }
+.reading-card .detail-heading > .color-tag-dot { margin-right: 4px; }
+.reading-card .detail-heading { column-gap: 6px; }
+#media-dialog .preview-actions > .color-tag-dot { width: 28px; height: 28px; min-height: 28px; padding: 0; border: 0; }
+@media (max-width: 790px) { .selection-toolbar > .author-actions { width: 100%; } }

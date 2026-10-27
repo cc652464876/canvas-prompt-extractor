@@ -3,11 +3,14 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { namespaceResult } = require('./author-library.cjs');
-const INDEX = '.项目索引.json';
+const { INDEX, findProjectFile, isProjectFile } = require('./project-files.cjs');
 const COLLECTION = '.作者选集.json';
-async function loadLocalCollection(directory) {
+async function loadLocalCollection(directory, selectedName = '') {
   const root = await fs.realpath(directory);
-  const indexFile = path.join(root, INDEX);
+  const name = selectedName || (await findProjectFile(root, 'collection'));
+  if (name !== path.basename(name) || !isProjectFile(name, 'collection'))
+    throw new Error('请选择作品集入口文件。');
+  const indexFile = path.join(root, name);
   if ((await fs.stat(indexFile)).size > 2 * 1024 * 1024) throw new Error('作者项目索引过大。');
   const index = JSON.parse(await fs.readFile(indexFile, 'utf8'));
   if (!index || typeof index !== 'object' || Array.isArray(index))
@@ -59,7 +62,7 @@ async function loadLocalCollection(directory) {
       const resolved = await fs.realpath(candidate);
       if (path.dirname(resolved).toLowerCase() !== root.toLowerCase())
         throw new Error('作品目录指向作者文件夹以外的位置。');
-      const loaded = await loadLocalProject(path.join(resolved, '.画布项目.json'));
+      const loaded = await loadLocalProject(resolved);
       if (loaded.collection) throw new Error('作品目录不能是另一套作者选集。');
       const metadata = loaded.result.metadata;
       if (platform && (metadata.platform !== platform || metadata.author !== author))

@@ -32,6 +32,7 @@
 .markdown-modes button:hover { color: var(--text); background: var(--soft); border: 0; text-decoration: none; }
 .prompt-text .markdown-content { white-space: normal; overflow-wrap: anywhere; }
 .markdown-content p { margin: 0 0 .75em; }
+.prompt-text .markdown-content p { font: inherit; }
 .markdown-content > :last-child { margin-bottom: 0; }
 .markdown-content :is(h1,h2,h3,h4,h5,h6) { margin: 1em 0 .5em; font-weight: 600; line-height: 1.5; }
 .markdown-content > :first-child { margin-top: 0; }

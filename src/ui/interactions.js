@@ -167,10 +167,11 @@ export function bindMagnifier(stage, image, asset, context) {
     true
   );
 }
-export function initMediaDialog(createMedia, stop, enterReader, reveal) {
+export function initMediaDialog(createMedia, stop, enterReader, reveal, createTagDot) {
   const dialog = document.getElementById('media-dialog'),
     body = document.getElementById('media-dialog-body');
-  let current = null;
+  let current = null,
+    tagDot = null;
   const local = document.createElement('span'),
     locate = document.createElement('button'),
     actions = document.querySelector('#media-dialog .preview-actions');
@@ -194,6 +195,9 @@ export function initMediaDialog(createMedia, stop, enterReader, reveal) {
   };
   openMediaPreview = (asset, context) => {
     current = { asset, context };
+    tagDot?.remove();
+    tagDot = createTagDot?.(asset, context);
+    if (tagDot) actions.prepend(tagDot);
     local.hidden = locate.hidden = asset.state !== 'done';
     if (asset.kind === 'text') {
       void window.lab

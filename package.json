@@ -7,6 +7,7 @@
   "main": "src/main.cjs",
   "scripts": {
     "build": "node scripts/build.cjs",
+    "build:launcher": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-launcher.ps1",
     "test": "node \"开发辅助/验收工具/test.cjs\"",
     "check": "eslint --config \"开发辅助/工具配置/eslint.config.js\" src scripts \"开发辅助/验收工具\" \"开发辅助/测试代码\"",
     "start": "node scripts/start.cjs",
@@ -20,6 +21,7 @@
     "verify:account-startup": "node scripts/start.cjs --verify-account-startup",
     "verify:browser-reset": "node scripts/start.cjs --verify-browser-reset",
     "verify:local-project": "node scripts/start.cjs --verify-local-project",
+    "verify:tags": "node scripts/start.cjs --verify-color-tags",
     "verify:cleanup": "node \"开发辅助/验收工具/verify-extraction-cleanup.cjs\"",
     "verify:themes": "node \"开发辅助/验收工具/verify-themes.cjs\"",
     "verify:deadline": "node scripts/start.cjs --verify-read-deadline",

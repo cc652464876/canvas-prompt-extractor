@@ -83,8 +83,8 @@ module.exports = async ({ ui, root, authorService, getResult, getStore, saveProm
   await savePrompts({ kinds: ['video', 'image', 'audio', 'text'], split: true, mode: 'full' });
   const saved = getStore().summary();
   assert.equal(path.basename(saved.directory), 'liblib_哈基乱剪');
-  for (const work of works)
-    assert.ok(await fs.stat(path.join(saved.directory, work.title, '.画布项目.json')));
+  for (const record of getStore().records)
+    assert.ok(await fs.stat(record.store.summary().manifestPath));
   check('Real prompts save separately inside author / work folders');
   await run(`document.querySelector('.board-toolbar').scrollIntoView({block:'start'})`);
   await wait(500);

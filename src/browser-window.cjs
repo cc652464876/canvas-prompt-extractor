@@ -3,6 +3,9 @@ const { BaseWindow, WebContentsView, ipcMain, Menu, nativeImage } = require('ele
 const path = require('node:path');
 const { browserAddress, isBrowserAddress } = require('./browser-address.cjs');
 const { bindDevToolsShortcut } = require('./devtools-shortcut.cjs');
+const { applyTaskbarIdentity } = require('./windows-taskbar.cjs');
+const { isTransparentRead } = require('./platform-presentation.cjs');
+const { bindPageAudio, syncPageAudio } = require('./page-audio.cjs');
 const { TAB_STRIP_HEIGHT, BROWSER_HEIGHT } = require('./browser-layout.cjs');
 const toolbarFile = path.join(__dirname, 'browser-toolbar', 'index.html');
 const toolbars = new Map(),
@@ -66,6 +69,7 @@ function createBrowserWindow(options = {}, controls = {}) {
     // Leave the strip's shared 2px bottom bar below the native caption controls.
     titleBarOverlay: { color: '#dee1e6', symbolColor: '#34363a', height: TAB_STRIP_HEIGHT - 2 }
   });
+  applyTaskbarIdentity(window);
   // BaseWindow needs its own application menu for native accelerators in DevTools.
   window.setMenu(Menu.getApplicationMenu());
   window.setAutoHideMenuBar(true);
@@ -122,6 +126,7 @@ function createBrowserWindow(options = {}, controls = {}) {
     },
     layout() {
       if (window.isDestroyed()) return;
+      browser.syncAudio();
       const [width, height] = window.getContentSize();
       const top = window.isFullScreen() ? 0 : Math.min(height, BROWSER_HEIGHT);
       toolbar.setVisible(top > 0);
@@ -131,6 +136,9 @@ function createBrowserWindow(options = {}, controls = {}) {
           tab.view.setBounds({ x: 0, y: top, width, height: Math.max(0, height - top) });
           tab.view.setVisible(tab.id === activeId);
         }
+    },
+    syncAudio() {
+      for (const tab of tabs.values()) if (tab.contents) syncPageAudio(tab.contents);
     },
     sync() {
       if (window.isDestroyed() || toolbar.webContents.isDestroyed()) return;
@@ -163,6 +171,17 @@ function createBrowserWindow(options = {}, controls = {}) {
             }
       );
       const wc = (tab.contents = tab.view.webContents);
+      bindPageAudio(
+        wc,
+        () =>
+          window.isDestroyed() ||
+          !window.isVisible() ||
+          window.isMinimized() ||
+          isTransparentRead(window) ||
+          tab.hidden ||
+          tab.id !== activeId ||
+          Boolean(blockedReason(window))
+      );
       wc.once('destroyed', () => {
         if (!window.isDestroyed() && tabs.has(tab.id))
           browser.closeTab(tab.id, { remember: false });
@@ -526,6 +545,9 @@ function createBrowserWindow(options = {}, controls = {}) {
   for (const name of [
     'resize',
     'show',
+    'hide',
+    'minimize',
+    'restore',
     'maximize',
     'unmaximize',
     'enter-full-screen',

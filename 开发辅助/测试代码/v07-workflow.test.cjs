@@ -107,12 +107,12 @@ test('Download-first creates work info without prompt documents; later saves sha
   );
   await store.save(true);
   assert.equal(store.directory, directory);
-  assert.equal(store.documents.length, 1);
+  assert.equal(store.documents.length, 2);
   assert.ok(store.documents[0].endsWith('__图片提示词.md'));
   store.options = { ...store.options, kinds: ['video', 'image', 'audio', 'text'], split: false };
   await store.save(true);
   assert.equal(store.directory, directory);
-  assert.equal(store.documents.length, 1);
+  assert.equal(store.documents.length, 2);
   assert.equal(
     (await fs.readdir(root)).filter((n) => n !== ' .项目索引.json' && !n.startsWith('.')).length,
     1
@@ -121,15 +121,16 @@ test('Download-first creates work info without prompt documents; later saves sha
 test('Stopping between category files retains completed files and leaves later files unwritten', async (t) => {
   const store = new ProjectStore(await temp(t));
   await store.create(result(), { split: true }, false);
-  const token = { cancelled: false },
-    original = store.archive.bind(store);
-  let archived = 0;
   await store.save();
   for (const name of store.documents)
     await fs.writeFile(path.join(store.directory, name), 'previous content');
-  store.archive = async (name) => {
-    await original(name);
-    if (++archived === 1) token.cancelled = true;
+  const token = {
+    get cancelled() {
+      return (
+        require('node:fs').readFileSync(path.join(store.directory, store.documents[0]), 'utf8') !==
+        'previous content'
+      );
+    }
   };
   const saved = await store.save(true, token);
   assert.equal(saved.cancelled, true);

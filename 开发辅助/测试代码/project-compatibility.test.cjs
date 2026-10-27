@@ -4,7 +4,7 @@ const test = require('node:test'),
   fs = require('node:fs/promises'),
   path = require('node:path'),
   os = require('node:os');
-const { ProjectStore, MANIFEST } = require('../../src/project-store.cjs');
+const { ProjectStore } = require('../../src/project-store.cjs');
 const { normalize } = require('../../src/normalize.cjs'),
   { markdown } = require('../../src/export/markdown.cjs');
 const fixtures = require('./fixtures/text-platforms.cjs');
@@ -34,7 +34,7 @@ test('Saved projects from an uninstalled brand open offline, with strict schema 
   const loaded = await new ProjectStore(root).load(store.directory);
   assert.equal(loaded.metadata.platform, 'archived-brand');
   assert.ok(loaded.entries.length);
-  const manifest = path.join(store.directory, MANIFEST),
+  const manifest = store.summary().manifestPath,
     record = JSON.parse(await fs.readFile(manifest, 'utf8'));
   record.result.metadata.platform = '../escape';
   await fs.writeFile(manifest, JSON.stringify(record));

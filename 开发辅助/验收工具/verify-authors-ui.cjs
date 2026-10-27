@@ -159,7 +159,7 @@ if (!process.versions.electron) {
       };
       try {
         await win.loadFile(path.join(root, 'src/ui/index.html'));
-        assert.equal(await run(`document.getElementById('start').textContent`), '开始读取网页');
+        assert.equal(await run(`document.getElementById('start').textContent`), '开始读取画布');
         for (const address of [
           'https://jimeng.jianying.com/s/hBHP6B5pXik/',
           'https://jimeng.jianying.com/ai-tool/personal/MS4wLjABAAAATESTAUTHOR',

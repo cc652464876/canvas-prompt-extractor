@@ -2,7 +2,12 @@
 const test = require('node:test'),
   assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { IndependentBrowser, siteForUrl } = require('../../src/services/independent-browser.cjs');
+const {
+  IndependentBrowser,
+  siteForUrl,
+  browserUserAgent,
+  isGoogleLogin
+} = require('../../src/services/independent-browser.cjs');
 function fixture() {
   const service = new IndependentBrowser({
     createWindow: (options, controls) => {
@@ -88,5 +93,74 @@ test('Cross-site navigation switches to the matching login session; OAuth popups
       (win) => win.webContents === popup && win.options.webContents === contents
     )
   );
+  service.dispose();
+});
+test('Google login stays in the shared browser session and hides the Electron user agent', () => {
+  assert.equal(siteForUrl('https://accounts.google.com/'), null);
+  assert.equal(isGoogleLogin('https://accounts.google.com/ServiceLogin'), true);
+  assert.equal(isGoogleLogin('https://accounts.google.com.evil.test/'), false);
+  const original =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Electron/44.5.1 Safari/537.36';
+  assert.equal(browserUserAgent(original).includes('Electron'), false);
+  let agent = original,
+    headerHook;
+  const service = new IndependentBrowser({
+    createWindow: (options, controls) => {
+      const win = new EventEmitter();
+      Object.assign(win, {
+        options,
+        controls,
+        url: '',
+        dead: false,
+        isDestroyed: () => win.dead,
+        isMinimized: () => false,
+        show() {},
+        focus() {},
+        destroy() {
+          win.dead = true;
+          win.emit('closed');
+        },
+        loadURL(url) {
+          return win.webContents.loadURL(url);
+        }
+      });
+      win.webContents = new EventEmitter();
+      Object.assign(win.webContents, {
+        getURL: () => win.url,
+        getUserAgent: () => agent,
+        setUserAgent(value) {
+          agent = value;
+        },
+        session: {
+          setPermissionRequestHandler() {},
+          webRequest: {
+            onBeforeSendHeaders(_filter, hook) {
+              headerHook = hook;
+            }
+          }
+        },
+        setWindowOpenHandler() {},
+        loadURL(url) {
+          win.url = url;
+          return Promise.resolve();
+        }
+      });
+      return win;
+    }
+  });
+  const google = service.open('https://accounts.google.com/');
+  assert.equal(google.options.webPreferences.partition, 'persist:browser');
+  assert.equal(google.controls.beforeNavigate('https://myaccount.google.com/'), true);
+  assert.equal(service.windows.size, 1);
+  assert.equal(agent.includes('Electron'), false);
+  const headers = {
+    'User-Agent': original,
+    'sec-ch-ua': '"Chromium";v="138", "Electron";v="44"'
+  };
+  headerHook({ requestHeaders: headers }, (value) => {
+    headers.sent = value.requestHeaders;
+  });
+  assert.equal(headers.sent['User-Agent'].includes('Electron'), false);
+  assert.equal(headers.sent['sec-ch-ua'], '"Chromium";v="138"');
   service.dispose();
 });

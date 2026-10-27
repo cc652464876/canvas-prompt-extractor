@@ -1,5 +1,12 @@
 // One-level selector shared by palettes and prompt fonts.
-export function createAppearanceDropdown({ trigger, list, options, onChange }) {
+export function createAppearanceDropdown({
+  trigger,
+  list,
+  options,
+  onChange,
+  maxHeight = 220,
+  allowCustomValue = false
+}) {
   let selected = options[0]?.value,
     search = '',
     searchTimer;
@@ -18,14 +25,14 @@ export function createAppearanceDropdown({ trigger, list, options, onChange }) {
     list.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
     list.classList.remove('opens-up');
-    list.style.maxHeight = '220px';
+    list.style.maxHeight = maxHeight + 'px';
     const rect = trigger.getBoundingClientRect(),
       bounds = trigger.closest('dialog').getBoundingClientRect();
     const below = Math.min(innerHeight - 16, bounds.bottom - 8) - rect.bottom - 6,
       above = rect.top - Math.max(16, bounds.top + 8) - 6;
     const upward = below < list.scrollHeight && above > below;
     list.classList.toggle('opens-up', upward);
-    list.style.maxHeight = Math.max(40, Math.min(220, upward ? above : below)) + 'px';
+    list.style.maxHeight = Math.max(40, Math.min(maxHeight, upward ? above : below)) + 'px';
     const button = buttons[Math.max(0, index)];
     button?.focus();
     button?.scrollIntoView({ block: 'nearest' });
@@ -62,7 +69,10 @@ export function createAppearanceDropdown({ trigger, list, options, onChange }) {
     buttons.push(button);
   });
   function set(value) {
-    selected = options.some((option) => option.value === value) ? value : options[0]?.value;
+    selected =
+      allowCustomValue || options.some((option) => option.value === value)
+        ? value
+        : options[0]?.value;
     const option = options.find((option) => option.value === selected);
     trigger.querySelector('.dropdown-label').textContent = option?.label || '';
     const badge = trigger.querySelector('.dropdown-badge');
